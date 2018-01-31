@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<componentregistry>
+ <adapters/>
+ <utilities>
+  <utility
+     interface="collective.es.index.interfaces.IElasticSearchIndexQueueProcessor"
+     name="collective.es.index"
+     factory="collective.es.index.ElasticSearchIndexQueueProcessor"
+  />
+ </utilities>
+</componentregistry>
