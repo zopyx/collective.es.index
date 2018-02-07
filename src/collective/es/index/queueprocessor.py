@@ -14,7 +14,7 @@ class ElasticSearchIndexQueueProcessor(object):
     """ a queue processor for ElasticSearch"""
 
     def index(self, obj, attributes=None):
-        es = self.get_es_client()
+        es = self._get_es_client()
         if es is None:
             logger.warning(
                 'No ElasticSearch client available.'
@@ -24,7 +24,7 @@ class ElasticSearchIndexQueueProcessor(object):
         uid = api.content.get_uuid(obj)
         try:
             es.index(
-                index=self.es_index_name,
+                index=self._es_index_name,
                 doc_type=obj.portal_type,
                 parent='',
                 id=uid,
@@ -33,11 +33,11 @@ class ElasticSearchIndexQueueProcessor(object):
         except Exception:
             logger.exception('indexing of {0} failed'.format(uid))
 
-    def reindex(self, obj, attributes=None):
+    def reindex(self, obj, attributes=None, update_metadata=1):
         self.index(obj, attributes)
 
     def unindex(self, obj):
-        es = self.get_es_client()
+        es = self._get_es_client()
         if es is None:
             logger.warning(
                 'No ElasticSearch client available.'
@@ -63,7 +63,7 @@ class ElasticSearchIndexQueueProcessor(object):
         pass
 
     # helper methods
-    def get_es_client(self):
+    def _get_es_client(self):
         return Elasticsearch(
             [
                 {
@@ -74,6 +74,6 @@ class ElasticSearchIndexQueueProcessor(object):
         )
 
     @property
-    def es_index_name(self):
+    def _es_index_name(self):
         portal = api.portal.get()
         return 'plone_{0}'.format(portal.getId())

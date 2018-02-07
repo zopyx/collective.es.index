@@ -1,11 +1,12 @@
 <?xml version="1.0"?>
 <componentregistry>
  <adapters/>
- <utilities>
-  <utility
-     interface="collective.es.index.interfaces.IElasticSearchIndexQueueProcessor"
+<utilities>
+<!--
+   THIS DOES NOT WORK, WHAT A CRAP
+   <utility
      name="collective.es.index"
-     factory="collective.es.index.ElasticSearchIndexQueueProcessor"
+     factory="collective.es.index.queueprocessor.ElasticSearchIndexQueueProcessor"
   />
- </utilities>
+ --> </utilities>
 </componentregistry>

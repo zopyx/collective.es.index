@@ -1,0 +1,43 @@
+<component prefix="collective.es.index.components">
+
+  <sectiontype name="elasticsearch"
+               implements="ZServer.server"
+               datatype=".ElasticSearchIngressConfFactory">
+    <multikey name="query" datatype="inet-address">
+      <description>
+      ElasticSearch query client address
+      </description>
+    </multikey>
+    <multikey name="ingest" datatype="inet-address">
+      <description>
+      ElasticSearch ingest client address
+      </description>
+    </multikey>
+    <key name="ssl" datatype="boolean" default="false">
+      <description>
+      Use SSL?
+      </description>
+    </key>
+    <key name="verify_certs" datatype="boolean" default="false">
+      <description>
+      Verify certificates?
+      </description>
+    </key>
+    <key name="ca_certs" datatype="existing-directory" required="no">
+      <description>
+      Provide a path to CA certs on disk?
+      </description>
+    </key>
+    <key name="client_cert" datatype="existing-file" required="no">
+      <description>
+      Provide a path to CA certs on disk?
+      </description>
+    </key>
+    <key name="client_key" datatype="existing-file" required="no">
+      <description>
+      Provide a path to CA certs on disk?
+      </description>
+    </key>
+  </sectiontype>
+
+</component>
