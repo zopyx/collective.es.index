@@ -109,8 +109,13 @@ class ElasticSearchIndexQueueProcessor(object):
                     data[fieldname] = base64.b64encode(fh.read())
             elif IRichTextValue.providedBy(field):
                 data[fieldname] = base64.b64encode(
-                    data[fieldname + '_meta']['data'],
+                    data[fieldname + '_meta']['data'].encode('utf8'),
                 )
+
+    def _expand_rid(self, obj, data):
+        cat = api.portal.get_tool('portal_catalog')
+        path = '/'.join(obj.getPhysicalPath())
+        data['portal_catalog_rid'] = cat.getrid(path)
 
     def index(self, obj, attributes=None):
         es = get_ingest_client()
@@ -123,6 +128,7 @@ class ElasticSearchIndexQueueProcessor(object):
         serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
         data = serializer()
         self._reduce_data(data)
+        self._expand_rid(obj, data)
         self._expand_binary_data(obj, data)
         uid = api.content.get_uuid(obj)
         es_kwargs = dict(
