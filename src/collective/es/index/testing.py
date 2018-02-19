@@ -29,13 +29,13 @@ COLLECTIVE_ES_INDEX_FIXTURE = CollectiveEsIndexLayer()
 
 COLLECTIVE_ES_INDEX_INTEGRATION_TESTING = IntegrationTesting(
     bases=(COLLECTIVE_ES_INDEX_FIXTURE,),
-    name='CollectiveEsIndexLayer:IntegrationTesting'
+    name='CollectiveEsIndexLayer:IntegrationTesting',
 )
 
 
 COLLECTIVE_ES_INDEX_FUNCTIONAL_TESTING = FunctionalTesting(
     bases=(COLLECTIVE_ES_INDEX_FIXTURE,),
-    name='CollectiveEsIndexLayer:FunctionalTesting'
+    name='CollectiveEsIndexLayer:FunctionalTesting',
 )
 
 
@@ -43,7 +43,7 @@ COLLECTIVE_ES_INDEX_ACCEPTANCE_TESTING = FunctionalTesting(
     bases=(
         COLLECTIVE_ES_INDEX_FIXTURE,
         REMOTE_LIBRARY_BUNDLE_FIXTURE,
-        z2.ZSERVER_FIXTURE
+        z2.ZSERVER_FIXTURE,
     ),
-    name='CollectiveEsIndexLayer:AcceptanceTesting'
+    name='CollectiveEsIndexLayer:AcceptanceTesting',
 )

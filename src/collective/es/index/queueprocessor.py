@@ -3,42 +3,145 @@ from Acquisition import aq_base
 from Acquisition import aq_parent
 from collective.es.index.interfaces import IElasticSearchIndexQueueProcessor
 from collective.es.index.utils import get_ingest_client
+from elasticsearch.exceptions import NotFoundError
 from plone import api
-from Products.CMFPlone.interfaces import IPloneSiteRoot
+from plone.app.textfield.interfaces import IRichTextValue
+from plone.namedfile.interfaces import IBlobby
 from plone.restapi.interfaces import ISerializeToJson
-from zope.interface import implementer
+from zope.annotation import IAnnotations
 from zope.component import getMultiAdapter
 from zope.globalrequest import getRequest
+from zope.interface import implementer
 
+import base64
 import logging
+import uuid
+
 
 logger = logging.getLogger('collective.es.index')
+
+
+ES_PORTAL_UUID_KEY = 'collective.es.index.portal_uuid'
+
+
+KEYS_TO_REMOVE = [
+    'items',
+    'items_total',
+    'parent',
+]
+
+INGEST_PIPELINES = {
+    'description': 'Extract Plone Binary attachment information',
+    'processors': [
+        {
+            'attachment': {
+                'field': 'text',
+                'target_field': 'extracted_text',
+                'ignore_missing': True,
+            },
+        },
+        {
+            'attachment': {
+                'field': 'file',
+                'target_field': 'extracted_file',
+                'ignore_missing': True,
+            },
+        },
+        {
+            'attachment': {
+                'field': 'image',
+                'target_field': 'extracted_image',
+                'ignore_missing': True,
+            },
+        },
+    ],
+}
 
 
 @implementer(IElasticSearchIndexQueueProcessor)
 class ElasticSearchIndexQueueProcessor(object):
     """ a queue processor for ElasticSearch"""
 
-    def index(self, obj, attributes=None):
-        es = get_ingest_client()
-        if es is None:
-            logger.warning(
-                'No ElasticSearch client available.'
-            )
+    def _check_and_add_portal_to_index(self, portal):
+        # at first portal is not in ES!
+        # Also, portal has no UUID. bad enough. so for es we give it one.
+        # If portal has our UUID we assume it is also indexed already
+        annotations = IAnnotations(portal)
+        if ES_PORTAL_UUID_KEY in annotations:
+            # looks like we're indexed.
             return
-        serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
+
+        annotations[ES_PORTAL_UUID_KEY] = uid = uuid.uuid4().hex
+        serializer = getMultiAdapter((portal, getRequest()), ISerializeToJson)
         data = serializer()
-        uid = api.content.get_uuid(obj)
+        self._reduce_data(data)
         es_kwargs = dict(
             index=self._es_index_name,
             doc_type='content',  # XXX why do we still need it in ES6+?
             id=uid,
             body=data,
         )
-        # parent = aq_parent(obj)
-        # if aq_base(IPloneSiteRoot(obj)) is not aq_base(parent):
-        # todo: update es_kwargs with parent data
-        #    pass
+        es = get_ingest_client()
+        try:
+            es.index(**es_kwargs)
+        except Exception:
+            logger.exception('indexing of {0} failed'.format(uid))
+
+    def _reduce_data(self, data):
+        for key in KEYS_TO_REMOVE:
+            if key in data:
+                del data[key]
+
+    def _iterate_binary_fields(self, obj, data):
+        for record in INGEST_PIPELINES['processors']:
+            yield record['attachment']['field']
+
+    def _expand_binary_data(self, obj, data):
+        for fieldname in self._iterate_binary_fields(obj, data):
+            if fieldname not in data:
+                continue
+            field = getattr(obj, fieldname, None)
+            if field is None:
+                continue
+            data[fieldname + '_meta'] = data[fieldname]
+            if IBlobby.providedBy(field):
+                with field.open() as fh:
+                    data[fieldname] = base64.b64encode(fh.read())
+            elif IRichTextValue.providedBy(field):
+                data[fieldname] = base64.b64encode(
+                    data[fieldname + '_meta']['data'],
+                )
+
+    def index(self, obj, attributes=None):
+        es = get_ingest_client()
+        if es is None:
+            logger.warning(
+                'No ElasticSearch client available.',
+            )
+            return
+        self._check_for_ingest_pipeline(es)
+        serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
+        data = serializer()
+        self._reduce_data(data)
+        self._expand_binary_data(obj, data)
+        uid = api.content.get_uuid(obj)
+        es_kwargs = dict(
+            index=self._es_index_name,
+            doc_type='content',  # XXX why do we still need it in ES6+?
+            id=uid,
+            pipeline=self._es_pipeline_name,
+            body=data,
+        )
+        parent = aq_parent(obj)
+        portal = api.portal.get()
+        if aq_base(portal) is aq_base(parent):
+            self._check_and_add_portal_to_index(portal)
+            # annotations = IAnnotations(portal)
+            # es_kwargs['parent'] = annotations[ES_PORTAL_UUID_KEY]
+            pass
+        else:
+            # es_kwargs['parent'] = api.content.get_uuid(parent)
+            pass
         try:
             es.index(**es_kwargs)
         except Exception:
@@ -51,7 +154,7 @@ class ElasticSearchIndexQueueProcessor(object):
         es = get_ingest_client()
         if es is None:
             logger.warning(
-                'No ElasticSearch client available.'
+                'No ElasticSearch client available.',
             )
             return
         uid = api.content.get_uuid(obj)
@@ -77,3 +180,15 @@ class ElasticSearchIndexQueueProcessor(object):
     def _es_index_name(self):
         portal = api.portal.get()
         return 'plone_{0}'.format(portal.getId()).lower()
+
+    @property
+    def _es_pipeline_name(self):
+        portal = api.portal.get()
+        return 'attachment_ingest_plone_{0}'.format(portal.getId()).lower()
+
+    def _check_for_ingest_pipeline(self, es):
+        # do we have the ingest pipeline?
+        try:
+            es.ingest.get_pipeline(self._es_pipeline_name)
+        except NotFoundError:
+            es.ingest.put_pipeline(self._es_pipeline_name, INGEST_PIPELINES)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Setup tests for this package."""
-from plone import api
 from collective.es.index.testing import COLLECTIVE_ES_INDEX_INTEGRATION_TESTING  # noqa
+from plone import api
 
 import unittest
 

@@ -1,16 +1,8 @@
 # -*- coding: utf-8 -*-
-from collective.es.index.interfaces import IElasticSearchClientProvider
+from collective.es.index.interfaces import IElasticSearchClient
 from elasticsearch import Elasticsearch
 from zope.component import provideUtility
-from zope.interface import implementer
-
-
-@implementer(IElasticSearchClientProvider)
-class ElasticSearchClientProvider(object):
-
-    def __init__(self, query, ingest):
-        self.query = query
-        self.ingest = ingest
+from zope.interface import directlyProvides
 
 
 class ElasticSearchIngressConfFactory(object):
@@ -33,7 +25,7 @@ class ElasticSearchIngressConfFactory(object):
         self.client_key = self.section.client_key
 
     def create(self):
-        query_client = Elasticsearch(
+        base_client = Elasticsearch(
             self.query,
             use_ssl=self.ssl,
             # here some more params need to be configured.
@@ -43,8 +35,6 @@ class ElasticSearchIngressConfFactory(object):
             use_ssl=self.ssl,
             # here some more params need to be configured.
         )
-        es_client_provider = ElasticSearchClientProvider(
-            query_client,
-            ingest_client
-        )
-        provideUtility(es_client_provider)
+        base_client.ingest = ingest_client
+        directlyProvides(base_client, IElasticSearchClient)
+        provideUtility(base_client)

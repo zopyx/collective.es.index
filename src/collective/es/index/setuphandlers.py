@@ -15,7 +15,13 @@ class HiddenProfiles(object):
 
 def post_install(context):
     """Post install script"""
-    # Do something at the end of the installation of this package.
+    # we need to index the PloneSiteRoot as well in order to have it as a valid
+    # parent
+
+    # serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
+
+    # then - in theory - we would need to index all content. Just this is
+    # probably expensive and may take a while. So we keep this a manual task.
 
 
 def uninstall(context):
