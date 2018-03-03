@@ -19,6 +19,10 @@ MGMT_PERMISSION = 'Manage ZCatalogIndex Entries'
 manage_addESSTIndexForm = PageTemplateFile('www/addIndex', globals())
 
 
+# Hint for my future self: When copying this code, never name it
+# manage_addIndex here. Otherwise install will be broken.
+# There is some serious namespace pollution in Zope.App.FactoryDispatcher
+
 def manage_addESSTIndex(
     context,
     id,
