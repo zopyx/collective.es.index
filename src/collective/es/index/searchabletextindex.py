@@ -10,6 +10,8 @@ from Products.PluginIndexes.interfaces import ISortIndex
 from zope.component import adapter
 from zope.interface import implementer
 
+import json
+
 
 VIEW_PERMISSION = 'View'
 MGMT_PERMISSION = 'Manage ZCatalogIndex Entries'
@@ -63,16 +65,16 @@ class ESSearchableTextIndex(SimpleItem):
         if extra is None:
             return
         try:
-            self.fieldweights = extra.fieldweights
+            self.query_template = extra.query_template
         except AttributeError:
             try:
                 # alternative: allow a dict (lowers bootstrapping effort
                 # from code)
-                self.fieldweights = extra['fieldweights']
+                self.fieldweights = extra['query']
             except KeyError:
                 raise ValueError(
                     'ESSearchableTextIndex needs \'extra\' kwarg with key or '
-                    'attribute \'fieldweights\'.',
+                    'attribute \'query_template\'.',
                 )
 
     ###########################################################################
@@ -141,6 +143,7 @@ class ESSearchableTextIndex(SimpleItem):
         record = parseIndexRequest(request, self.id)
         if record.keys is None:
             return None
+        es_query = self._apply_template(record)
         # import pdb; pdb.set_trace()
 
     def numObjects(self):
@@ -174,7 +177,9 @@ class ESSearchableTextIndex(SimpleItem):
     #  private helper methods
     ###########################################################################
 
-    # if needed
+    def _apply_template(self, template_context):
+        query_text = self.query_template.format(template_context)
+        return json.loads(query_text)
 
 
 InitializeClass(ESSearchableTextIndex)
