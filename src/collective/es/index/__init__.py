@@ -7,13 +7,13 @@ _ = MessageFactory('collective.es.index')
 
 
 def initialize(context):
-    from . import searchabletextindex
+    from . import esproxyindex
     context.registerClass(
-        searchabletextindex.ESSearchableTextIndex,
+        esproxyindex.ElasticSearchProxyIndex,
         permission='Add Pluggable Index',
         constructors=(
-            searchabletextindex.manage_addESSTIndexForm,
-            searchabletextindex.manage_addESSTIndex,
+            esproxyindex.manage_addESPIndexForm,
+            esproxyindex.manage_addESPIndex,
         ),
         icon='www/index.gif',
         visibility=None,

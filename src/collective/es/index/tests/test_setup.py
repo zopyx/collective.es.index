@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Setup tests for this package."""
-from collective.es.index.testing import COLLECTIVE_ES_INDEX_INTEGRATION_TESTING  # noqa
+from collective.es.index.testing import COLLECTIVE_ES_INDEX_INTEGRATION_TESTING
 from plone import api
 
 import unittest
@@ -23,12 +23,9 @@ class TestSetup(unittest.TestCase):
 
     def test_browserlayer(self):
         """Test that ICollectiveEsIndexLayer is registered."""
-        from collective.es.index.interfaces import (
-            ICollectiveEsIndexLayer)
+        from collective.es.index.interfaces import ICollectiveEsIndexLayer
         from plone.browserlayer import utils
-        self.assertIn(
-            ICollectiveEsIndexLayer,
-            utils.registered_layers())
+        self.assertIn(ICollectiveEsIndexLayer, utils.registered_layers())
 
 
 class TestUninstall(unittest.TestCase):
@@ -42,14 +39,12 @@ class TestUninstall(unittest.TestCase):
 
     def test_product_uninstalled(self):
         """Test if collective.es.index is cleanly uninstalled."""
-        self.assertFalse(self.installer.isProductInstalled(
-            'collective.es.index'))
+        self.assertFalse(
+            self.installer.isProductInstalled('collective.es.index'),
+        )
 
     def test_browserlayer_removed(self):
         """Test that ICollectiveEsIndexLayer is removed."""
-        from collective.es.index.interfaces import \
-            ICollectiveEsIndexLayer
+        from collective.es.index.interfaces import ICollectiveEsIndexLayer
         from plone.browserlayer import utils
-        self.assertNotIn(
-           ICollectiveEsIndexLayer,
-           utils.registered_layers())
+        self.assertNotIn(ICollectiveEsIndexLayer, utils.registered_layers())

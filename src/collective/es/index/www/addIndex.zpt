@@ -2,7 +2,7 @@
 <h1 tal:replace="structure context/manage_tabs">TABS</h1>
 
 
-<form action="manage_addESSTIndex" method="post" enctype="multipart/form-data">
+<form action="manage_addESPIndex" method="post" enctype="multipart/form-data">
 <table cellspacing="0" cellpadding="2" border="0">
   <tr>
     <td align="left" valign="top">
@@ -22,7 +22,7 @@
     </div>
     </td>
     <td align="left" valign="top">
-     ESSearchableTextIndex
+     ElasticSearchProxyIndex
     </td>
   </tr>
   <tr>

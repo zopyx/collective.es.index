@@ -16,14 +16,14 @@ import json
 VIEW_PERMISSION = 'View'
 MGMT_PERMISSION = 'Manage ZCatalogIndex Entries'
 
-manage_addESSTIndexForm = PageTemplateFile('www/addIndex', globals())
+manage_addESPIndexForm = PageTemplateFile('www/addIndex', globals())
 
 
 # Hint for my future self: When copying this code, never name it
 # manage_addIndex here. Otherwise install will be broken.
 # There is some serious namespace pollution in Zope.App.FactoryDispatcher
 
-def manage_addESSTIndex(
+def manage_addESPIndex(
     context,
     id,
     extra=None,
@@ -34,7 +34,7 @@ def manage_addESSTIndex(
     """Adds a date range in range index"""
     result = context.manage_addIndex(
         id,
-        'ESSearchableTextIndex',
+        'ElasticSearchProxyIndex',
         extra=extra,
         REQUEST=REQUEST,
         RESPONSE=RESPONSE,
@@ -44,8 +44,8 @@ def manage_addESSTIndex(
 
 
 @implementer(ISortIndex)
-class ESSearchableTextIndex(SimpleItem):
-    meta_type = 'ESSearchableTextIndex'
+class ElasticSearchProxyIndex(SimpleItem):
+    meta_type = 'ElasticSearchProxyIndex'
     security = ClassSecurityInfo()
 
     manage_options = (
@@ -74,11 +74,11 @@ class ESSearchableTextIndex(SimpleItem):
             try:
                 # alternative: allow a dict (lowers bootstrapping effort
                 # from code)
-                self.fieldweights = extra['query']
+                self.query_template = extra['query_template']
             except KeyError:
                 raise ValueError(
-                    'ESSearchableTextIndex needs \'extra\' kwarg with key or '
-                    'attribute \'query_template\'.',
+                    'ElasticSearchProxyIndex needs "extra" kwarg with key or '
+                    'attribute "query_template".',
                 )
 
     ###########################################################################
@@ -186,10 +186,10 @@ class ESSearchableTextIndex(SimpleItem):
         return json.loads(query_text)
 
 
-InitializeClass(ESSearchableTextIndex)
+InitializeClass(ElasticSearchProxyIndex)
 
 
-@adapter(ESSearchableTextIndex, ISetupEnviron)
+@adapter(ElasticSearchProxyIndex, ISetupEnviron)
 class IndexNodeAdapter(NodeAdapterBase):
     """Node im- and exporter for Index.
     """
