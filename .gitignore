@@ -12,6 +12,7 @@ elasticsearch/
 eggs/
 htmlcov/
 include/
+jupyter/
 lib/
 local/
 parts/
