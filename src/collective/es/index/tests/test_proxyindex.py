@@ -6,8 +6,10 @@ from plone import api
 import unittest
 
 
-TEST_TEMPLATE = """
-{}
+TEST_TEMPLATE_SIMPLE = """\
+{
+    "foo": "{{bar}}"
+}
 """
 
 
@@ -18,24 +20,26 @@ class TestESProxyIndex(unittest.TestCase):
 
     def setUp(self):
         """Custom shared utility setup for following tests."""
-        self.portal = self.layer['portal']
+        self.catalog = self.layer['portal']['portal_catalog']
         # install index
         from collective.es.index.esproxyindex import ElasticSearchProxyIndex
         espi = ElasticSearchProxyIndex(
             'espi',
             extra={
-                'query_template': TEST_TEMPLATE,
+                'query_template': TEST_TEMPLATE_SIMPLE,
             },
-            caller=self.portal.portal_catalog,
+            caller=self.catalog,
         )
-        self.portal.portal_catalog.addIndex('espi', espi)
+        self.catalog.addIndex('espi', espi)
 
     def test_index_installed(self):
         """Test if proxy index is installed."""
-        self.assertIn(
-            'espi',
-            [x.getId() for x in self.portal.portal_catalog.getIndexObjects()],
-        )
+        self.assertIn('espi', self.catalog.indexes())
 
-    def test_query_index(self):
-        pass
+    def test_template(self):
+        idx = self.catalog._catalog.indexes['espi']
+        result = idx._apply_template({'bar': 'baz'})
+        self.assertEqual(result['foo'], u'baz')
+
+#    def test_query(self):
+#        idx = self.catalog._catalog.indexes['espi']

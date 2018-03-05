@@ -3,6 +3,7 @@ from Acquisition import aq_base
 from Acquisition import aq_parent
 from collective.es.index.interfaces import IElasticSearchIndexQueueProcessor
 from collective.es.index.utils import get_ingest_client
+from collective.es.index.utils import index_name
 from elasticsearch.exceptions import NotFoundError
 from plone import api
 from plone.app.textfield.interfaces import IRichTextValue
@@ -76,7 +77,7 @@ class ElasticSearchIndexQueueProcessor(object):
         data = serializer()
         self._reduce_data(data)
         es_kwargs = dict(
-            index=self._es_index_name,
+            index=index_name(),
             doc_type='content',  # XXX why do we still need it in ES6+?
             id=uid,
             body=data,
@@ -132,7 +133,7 @@ class ElasticSearchIndexQueueProcessor(object):
         self._expand_binary_data(obj, data)
         uid = api.content.get_uuid(obj)
         es_kwargs = dict(
-            index=self._es_index_name,
+            index=index_name(),
             doc_type='content',  # XXX why do we still need it in ES6+?
             id=uid,
             pipeline=self._es_pipeline_name,
@@ -183,14 +184,8 @@ class ElasticSearchIndexQueueProcessor(object):
         pass
 
     @property
-    def _es_index_name(self):
-        portal = api.portal.get()
-        return 'plone_{0}'.format(portal.getId()).lower()
-
-    @property
     def _es_pipeline_name(self):
-        portal = api.portal.get()
-        return 'attachment_ingest_plone_{0}'.format(portal.getId()).lower()
+        return 'attachment_ingest_{0}'.format(index_name())
 
     def _check_for_ingest_pipeline(self, es):
         # do we have the ingest pipeline?

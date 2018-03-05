@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from AccessControl import ClassSecurityInfo
+from collective.es.index.utils import get_query_client
+from collective.es.index.utils import index_name
 from Globals import InitializeClass
 from OFS.SimpleItem import SimpleItem
 from Products.GenericSetup.interfaces import ISetupEnviron
@@ -10,8 +12,11 @@ from Products.PluginIndexes.interfaces import ISortIndex
 from zope.component import adapter
 from zope.interface import implementer
 
+import jinja2
 import json
 
+
+jinja_loader = jinja2.Environment(loader=jinja2.BaseLoader)
 
 VIEW_PERMISSION = 'View'
 MGMT_PERMISSION = 'Manage ZCatalogIndex Entries'
@@ -147,8 +152,14 @@ class ElasticSearchProxyIndex(SimpleItem):
         record = parseIndexRequest(request, self.id)
         if record.keys is None:
             return None
-        es_query = self._apply_template(record)
-        # import pdb; pdb.set_trace()
+        query_body = self._apply_template(record)
+        es_kwargs = dict(
+            index=index_name(),
+            body=query_body,
+        )
+        es = get_query_client()
+        result = es.search(**es_kwargs)
+        import pdb; pdb.set_trace()
 
     def numObjects(self):
         """Return the number of indexed objects."""
@@ -181,8 +192,9 @@ class ElasticSearchProxyIndex(SimpleItem):
     #  private helper methods
     ###########################################################################
 
-    def _apply_template(self, template_context):
-        query_text = self.query_template.format(template_context)
+    def _apply_template(self, template_data):
+        tpl = jinja_loader.from_string(self.query_template)
+        query_text = tpl.render(**template_data)
         return json.loads(query_text)
 
 

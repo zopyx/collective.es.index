@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from collective.es.index.interfaces import IElasticSearchClient
+from plone import api
 from zope.component import queryUtility
 
 import logging
@@ -34,3 +35,8 @@ def remove_index():
     es = get_ingest_client()
     if es.indices.exists(index=INDEX):
         es.indices.delete(index=INDEX)
+
+
+def index_name(self):
+    portal = api.portal.get()
+    return 'plone_{0}'.format(portal.getId()).lower()
