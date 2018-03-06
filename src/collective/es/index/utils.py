@@ -37,6 +37,6 @@ def remove_index():
         es.indices.delete(index=INDEX)
 
 
-def index_name(self):
+def index_name():
     portal = api.portal.get()
     return 'plone_{0}'.format(portal.getId()).lower()

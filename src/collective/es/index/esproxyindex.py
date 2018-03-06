@@ -156,6 +156,7 @@ class ElasticSearchProxyIndex(SimpleItem):
         es_kwargs = dict(
             index=index_name(),
             body=query_body,
+            _source_include=['rid', 'id']
         )
         es = get_query_client()
         result = es.search(**es_kwargs)

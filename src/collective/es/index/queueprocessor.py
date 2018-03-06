@@ -8,6 +8,7 @@ from elasticsearch.exceptions import NotFoundError
 from plone import api
 from plone.app.textfield.interfaces import IRichTextValue
 from plone.namedfile.interfaces import IBlobby
+from plone.memoize import ram
 from plone.restapi.interfaces import ISerializeToJson
 from zope.annotation import IAnnotations
 from zope.component import getMultiAdapter
@@ -167,8 +168,8 @@ class ElasticSearchIndexQueueProcessor(object):
         uid = api.content.get_uuid(obj)
         try:
             es.delete(
-                index=self.index,
-                doc_type=obj.portal_type,
+                index=index_name(),
+                doc_type='content',  # XXX why do we still need it in ES6+?
                 id=uid,
             )
         except Exception:
@@ -187,6 +188,7 @@ class ElasticSearchIndexQueueProcessor(object):
     def _es_pipeline_name(self):
         return 'attachment_ingest_{0}'.format(index_name())
 
+    @ram.cache(lambda *args: index_name())
     def _check_for_ingest_pipeline(self, es):
         # do we have the ingest pipeline?
         try:
