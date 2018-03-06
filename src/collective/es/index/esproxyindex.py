@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from AccessControl import ClassSecurityInfo
+from AccessControl.requestmethod import postonly
+from BTrees.IIBTree import IISet
 from collective.es.index.utils import get_query_client
 from collective.es.index.utils import index_name
 from Globals import InitializeClass
@@ -14,7 +16,10 @@ from zope.interface import implementer
 
 import jinja2
 import json
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 jinja_loader = jinja2.Environment(loader=jinja2.BaseLoader)
 
@@ -22,6 +27,8 @@ VIEW_PERMISSION = 'View'
 MGMT_PERMISSION = 'Manage ZCatalogIndex Entries'
 
 manage_addESPIndexForm = PageTemplateFile('www/addIndex', globals())
+
+BATCH_SIZE = 500
 
 
 # Hint for my future self: When copying this code, never name it
@@ -53,13 +60,13 @@ class ElasticSearchProxyIndex(SimpleItem):
     meta_type = 'ElasticSearchProxyIndex'
     security = ClassSecurityInfo()
 
+    manage_main = PageTemplateFile('www/manageIndex', globals())
     manage_options = (
         {
             'label': 'Settings',
             'action': 'manage_main',
         },
-    ),
-    manage_main = PageTemplateFile('www/manageIndex', globals())
+    )
 
     def __init__(
         self,
@@ -85,6 +92,19 @@ class ElasticSearchProxyIndex(SimpleItem):
                     'ElasticSearchProxyIndex needs "extra" kwarg with key or '
                     'attribute "query_template".',
                 )
+
+    @security.protected(MGMT_PERMISSION)
+    @postonly
+    def manage_ESPIndexExtras(self, REQUEST):
+        """stores changed extras """
+        self.query_template = REQUEST.form['extra']['query_template']
+        REQUEST['RESPONSE'].redirect(
+            '{0}/manage_catalogIndexes?manage_tabs_message=Updated '
+            'index settings for {1}'.format(
+                self.aq_parent.absolute_url(),
+                self.id,
+            ),
+        )
 
     ###########################################################################
     # Methods we dont need to implement, from IPluginIndex.
@@ -116,9 +136,9 @@ class ElasticSearchProxyIndex(SimpleItem):
         """Get a sequence of attribute names that are indexed by the index.
         return sequence of indexed attributes
 
-        XXX: here we could fiddle with the ES query to get the attributes.
-             For now, we just return the index name.
         """
+        # Future: here we could fiddle with the ES query to get the attributes.
+        #         For now, we just return the index name.
         return [self.id]
 
     def getIndexQueryNames(self):
@@ -152,26 +172,48 @@ class ElasticSearchProxyIndex(SimpleItem):
         record = parseIndexRequest(request, self.id)
         if record.keys is None:
             return None
-        query_body = self._apply_template(record)
+        template_params = record.keys[0]
+        query_body = self._apply_template(template_params)
         es_kwargs = dict(
             index=index_name(),
             body=query_body,
-            _source_include=['rid', 'id']
+            size=BATCH_SIZE,
+            scroll='1m',
+            _source_include=['rid'],
         )
         es = get_query_client()
         result = es.search(**es_kwargs)
-        import pdb; pdb.set_trace()
+
+        # initial return value, other batches to be applied
+        retval = IISet([r['_source']['rid'] for r in result['hits']['hits']])
+
+        total = result['hits']['total']
+        if total > BATCH_SIZE:
+            sid = result['_scroll_id']
+            counter = BATCH_SIZE
+            while counter < total:
+                result = es.scroll(scroll_id=sid, scroll='1m')
+                for record in result['hits']['hits']:
+                    retval.append(record['_source']['rid'])
+                counter += BATCH_SIZE
+        return retval
 
     def numObjects(self):
         """Return the number of indexed objects."""
-        # XXX: figure out how to get all possible candidates for text query
-        #      for now all ES indexed object are fine.
-        return -1
+        es_kwargs = dict(
+            index=index_name(),
+            body={'query': {'match_all': {}}},
+        )
+        es = get_query_client()
+        try:
+            return es.count(**es_kwargs)['count']
+        except Exception:
+            logger.exception('ElasticSearch "count" query failed')
+            return 'Problem getting all documents count from ElasticSearch!'
 
     def indexSize(self):
         """Return the size of the index in terms of distinct values."""
-        # XXX: is this possible with ES? I fear not.
-        return -1
+        return 'n/a'
 
     ###########################################################################
     #  methods coming from ISortIndex

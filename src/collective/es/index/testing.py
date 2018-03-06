@@ -21,6 +21,19 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
         self.loadZCML(package=collective.es.index)
 
     def setUpPloneSite(self, portal):
+        # provide an ES connection
+        from collective.es.index.interfaces import IElasticSearchClient
+        from elasticsearch import Elasticsearch
+        from zope.component import provideUtility
+        from zope.interface import directlyProvides
+        es = Elasticsearch(
+            [{'host': '127.0.0.1', 'port': '9200'}],
+            use_ssl=False,
+        )
+        directlyProvides(es, IElasticSearchClient)
+        provideUtility(es)
+
+        # load profile
         applyProfile(portal, 'collective.es.index:default')
 
 

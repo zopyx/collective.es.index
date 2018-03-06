@@ -20,7 +20,7 @@ def get_query_client():
     """
     es = _get_elastic_search_client()
     if es:
-        return es.query
+        return es
 
 
 def get_ingest_client():

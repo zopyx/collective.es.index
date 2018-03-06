@@ -7,8 +7,8 @@ from collective.es.index.utils import index_name
 from elasticsearch.exceptions import NotFoundError
 from plone import api
 from plone.app.textfield.interfaces import IRichTextValue
-from plone.namedfile.interfaces import IBlobby
 from plone.memoize import ram
+from plone.namedfile.interfaces import IBlobby
 from plone.restapi.interfaces import ISerializeToJson
 from zope.annotation import IAnnotations
 from zope.component import getMultiAdapter
@@ -117,7 +117,7 @@ class ElasticSearchIndexQueueProcessor(object):
     def _expand_rid(self, obj, data):
         cat = api.portal.get_tool('portal_catalog')
         path = '/'.join(obj.getPhysicalPath())
-        data['portal_catalog_rid'] = cat.getrid(path)
+        data['rid'] = cat.getrid(path)
 
     def index(self, obj, attributes=None):
         es = get_ingest_client()
