@@ -254,21 +254,20 @@ class IndexNodeAdapter(NodeAdapterBase):
         """Export the object as a DOM node.
         """
         node = self._getObjectNode('index')
-        container = self._doc.createElement('fields')
-        node.appendChild(container)
-        for field in self.context.fieldweights:
-            child = self._doc.createElement(field)
-            child.attributes['weight'] = str(
-                self.context.fieldweights['field'],
-            )
-            container.appendChild(child),
+        child = self._doc.createElement('querytemplate')
+        text = self._doc.createTextNode(self.context.query_template)
+        child.appendChild(text)
+        node.appendChild(child)
         return node
 
     @node.setter
     def node(self, node):
         """Import the object from the DOM node.
         """
-        self.context.fieldweights = {}
-        for field in node['fields'].childnodes:
-            value = field.getAttribute('value')
-            self.context.fieldweights[field.tagName] = float(value)
+        child_nodes = {x for x in node.childNodes if x.nodeType == 1}
+
+        if child_nodes:
+            self.context.query_template = child_nodes["startindex"].encode(
+                'utf-8'
+            )
+        self.context.endindex = child_nodes["endindex"].encode('utf-8')
