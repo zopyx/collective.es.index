@@ -264,10 +264,12 @@ class IndexNodeAdapter(NodeAdapterBase):
     def node(self, node):
         """Import the object from the DOM node.
         """
-        child_nodes = {x for x in node.childNodes if x.nodeType == 1}
-
+        child_nodes = [
+            x for x in node.childNodes
+            if x.nodeType == 1 and x.nodeName == 'querytemplate'
+        ]
         if child_nodes:
-            self.context.query_template = child_nodes["startindex"].encode(
-                'utf-8'
-            )
-        self.context.endindex = child_nodes["endindex"].encode('utf-8')
+            text_node = child_nodes[0].childNodes[0]
+            self.context.query_template = text_node.data.encode('utf-8')
+        else:
+            self.context.query_template = '{}'  # noqa: P103
