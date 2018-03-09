@@ -10,8 +10,8 @@
             "title^3",
             "description^2",
             "extracted_text",
-            "extratced_file",
-            "extratced_image"
+            "extracted_file",
+            "extracted_image"
         ]
     }
   }
