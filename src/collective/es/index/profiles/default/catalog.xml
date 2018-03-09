@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<object name="portal_catalog" meta_type="Plone Catalog Tool">
+  <index name="espi" meta_type="ElasticSearchProxyIndex">
+    <querytemplate>
+{
+  "query": {
+    "multi_match" : {
+        "query":    "{{keys[0].rstrip('*')}}",
+        "fields": [
+            "title^3",
+            "description^2",
+            "extracted_text",
+            "extratced_file",
+            "extratced_image"
+        ]
+    }
+  }
+}
+    </querytemplate>
+  </index>
+</object>
