@@ -11,6 +11,7 @@ from plone.memoize import ram
 from plone.namedfile.interfaces import IBlobby
 from plone.restapi.interfaces import ISerializeToJson
 from zope.annotation import IAnnotations
+from zope.component import ComponentLookupError
 from zope.component import getMultiAdapter
 from zope.globalrequest import getRequest
 from zope.interface import implementer
@@ -63,6 +64,18 @@ INGEST_PIPELINES = {
 @implementer(IElasticSearchIndexQueueProcessor)
 class ElasticSearchIndexQueueProcessor(object):
     """ a queue processor for ElasticSearch"""
+
+    @property
+    def _es_pipeline_name(self):
+        return 'attachment_ingest_{0}'.format(index_name())
+
+    @ram.cache(lambda *args: index_name())
+    def _check_for_ingest_pipeline(self, es):
+        # do we have the ingest pipeline?
+        try:
+            es.ingest.get_pipeline(self._es_pipeline_name)
+        except NotFoundError:
+            es.ingest.put_pipeline(self._es_pipeline_name, INGEST_PIPELINES)
 
     def _check_and_add_portal_to_index(self, portal):
         # at first portal is not in ES!
@@ -127,8 +140,24 @@ class ElasticSearchIndexQueueProcessor(object):
             )
             return
         self._check_for_ingest_pipeline(es)
-        serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
-        data = serializer()
+        try:
+            serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
+        except ComponentLookupError:
+            logger.exception(
+                'Abort ElasticSearch Indexing for {0}'.format(
+                    obj.absolute_url()
+                )
+            )
+            return
+        try:
+            data = serializer()
+        except ComponentLookupError:
+            logger.exception(
+                'Abort ElasticSearch Indexing for {0}'.format(
+                    obj.absolute_url()
+                )
+            )
+            return
         self._reduce_data(data)
         self._expand_rid(obj, data)
         self._expand_binary_data(obj, data)
@@ -183,15 +212,3 @@ class ElasticSearchIndexQueueProcessor(object):
 
     def abort(self):
         pass
-
-    @property
-    def _es_pipeline_name(self):
-        return 'attachment_ingest_{0}'.format(index_name())
-
-    @ram.cache(lambda *args: index_name())
-    def _check_for_ingest_pipeline(self, es):
-        # do we have the ingest pipeline?
-        try:
-            es.ingest.get_pipeline(self._es_pipeline_name)
-        except NotFoundError:
-            es.ingest.put_pipeline(self._es_pipeline_name, INGEST_PIPELINES)

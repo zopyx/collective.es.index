@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from AccessControl import ClassSecurityInfo
 from AccessControl.requestmethod import postonly
-from BTrees.IIBTree import IISet
+from BTrees.IIBTree import IIBTree
 from collective.es.index.utils import get_query_client
 from collective.es.index.utils import index_name
 from Globals import InitializeClass
@@ -60,6 +60,8 @@ class ElasticSearchProxyIndex(SimpleItem):
     meta_type = 'ElasticSearchProxyIndex'
     security = ClassSecurityInfo()
 
+    query_options = ('query',)
+
     manage_main = PageTemplateFile('www/manageIndex', globals())
     manage_options = (
         {
@@ -112,7 +114,7 @@ class ElasticSearchProxyIndex(SimpleItem):
     ###########################################################################
 
     def index_object(self, documentId, obj, threshold=None):
-        pass
+        return 0
 
     def unindex_object(self, documentId):
         pass
@@ -172,20 +174,29 @@ class ElasticSearchProxyIndex(SimpleItem):
         record = parseIndexRequest(request, self.id)
         if record.keys is None:
             return None
-        template_params = record.keys[0]
+        template_params = {
+            'keys': record.keys
+        }
         query_body = self._apply_template(template_params)
+        logger.info(query_body)
         es_kwargs = dict(
             index=index_name(),
             body=query_body,
             size=BATCH_SIZE,
             scroll='1m',
-            _source_include=['rid'],
+            _source_include=['rid', 'title'],
         )
         es = get_query_client()
         result = es.search(**es_kwargs)
-
         # initial return value, other batches to be applied
-        retval = IISet([r['_source']['rid'] for r in result['hits']['hits']])
+
+        def score(record):
+            logger.info((record['_source']['title'], record['_score']))
+            return int(10000 * float(record['_score']))
+
+        retval = IIBTree()
+        for r in result['hits']['hits']:
+            retval[r['_source']['rid']] = score(r)
 
         total = result['hits']['total']
         if total > BATCH_SIZE:
@@ -194,9 +205,10 @@ class ElasticSearchProxyIndex(SimpleItem):
             while counter < total:
                 result = es.scroll(scroll_id=sid, scroll='1m')
                 for record in result['hits']['hits']:
-                    retval.append(record['_source']['rid'])
+                    retval[record['_source']['rid']] = score(record)
                 counter += BATCH_SIZE
-        return retval
+        if retval:
+            return retval, (self.id,)
 
     def numObjects(self):
         """Return the number of indexed objects."""
@@ -219,7 +231,7 @@ class ElasticSearchProxyIndex(SimpleItem):
     #  methods coming from ISortIndex
     ###########################################################################
 
-    def keyForDocument(documentId):
+    def keyForDocument(self, documentId):
         """Return the sort key that cooresponds to the specified document id
 
         This method is no longer used by ZCatalog, but is left for backwards
@@ -227,9 +239,11 @@ class ElasticSearchProxyIndex(SimpleItem):
         # We do not implement this BBB method.
         pass
 
-    def documentToKeyMap():
+    def documentToKeyMap(self):
         """Return an object that supports __getitem__ and may be used to
         quickly lookup the sort key given a document id"""
+
+        # XXX no idea when this is called.
 
     ###########################################################################
     #  private helper methods
@@ -237,7 +251,7 @@ class ElasticSearchProxyIndex(SimpleItem):
 
     def _apply_template(self, template_data):
         tpl = jinja_loader.from_string(self.query_template)
-        query_text = tpl.render(**template_data)
+        query_text = tpl.render(template_data)
         return json.loads(query_text)
 
 
