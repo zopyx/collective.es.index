@@ -5,6 +5,7 @@ from collective.es.index.interfaces import IElasticSearchIndexQueueProcessor
 from collective.es.index.utils import get_ingest_client
 from collective.es.index.utils import index_name
 from elasticsearch.exceptions import NotFoundError
+from elasticsearch.exceptions import TransportError
 from plone import api
 from plone.app.textfield.interfaces import IRichTextValue
 from plone.memoize import ram
@@ -17,6 +18,8 @@ from zope.globalrequest import getRequest
 from zope.interface import implementer
 
 import base64
+import collections
+import datetime
 import logging
 import uuid
 
@@ -25,12 +28,14 @@ logger = logging.getLogger('collective.es.index')
 
 
 ES_PORTAL_UUID_KEY = 'collective.es.index.portal_uuid'
+CACHE_ATTRIBUTE = '_collective_elasticsearch_mapping_cache_'
 
 
 KEYS_TO_REMOVE = [
     'items',
     'items_total',
     'parent',
+    '@components',
 ]
 
 INGEST_PIPELINES = {
@@ -60,6 +65,15 @@ INGEST_PIPELINES = {
     ],
 }
 
+MAPPING_TYPE_MAP = collections.OrderedDict([
+    (bool, {'type': 'boolean'}),  # bool first, its also an int
+    (int, {'type': 'long'}),
+    (float, {'type': 'double'}),
+    (datetime.datetime, {'type': 'date'}),
+    (basestring, {'type': 'text'}),
+    (dict, {'type': 'object'}),
+])
+
 
 @implementer(IElasticSearchIndexQueueProcessor)
 class ElasticSearchIndexQueueProcessor(object):
@@ -69,6 +83,9 @@ class ElasticSearchIndexQueueProcessor(object):
     def _es_pipeline_name(self):
         return 'attachment_ingest_{0}'.format(index_name())
 
+    def _create_index(seld, es):
+        es.indices.create(index=index_name())
+
     @ram.cache(lambda *args: index_name())
     def _check_for_ingest_pipeline(self, es):
         # do we have the ingest pipeline?
@@ -76,6 +93,60 @@ class ElasticSearchIndexQueueProcessor(object):
             es.ingest.get_pipeline(self._es_pipeline_name)
         except NotFoundError:
             es.ingest.put_pipeline(self._es_pipeline_name, INGEST_PIPELINES)
+
+    def _get_mapping(self, es):
+        request = getRequest()
+        mapping = getattr(request, CACHE_ATTRIBUTE, None)
+        if mapping is not None:
+            return mapping
+        try:
+            mapping = es.indices.get_mapping(index=index_name())
+        except TransportError as e:
+            if e.status_code == 404:
+                self._create_index(es)
+                mapping = es.indices.get_mapping(index=index_name())
+            else:
+                raise
+        setattr(request, CACHE_ATTRIBUTE, mapping)
+        return mapping
+
+    def _auto_mapping(self, es, obj, data):
+        mappings = self._get_mapping(es)
+        old_map = mappings[index_name()]['mappings']
+        old_map = old_map.get('content', {}).get('properties', {})
+        new_map = {}
+        for key in data:
+            if key not in old_map:
+                # figure out field type
+                value = data[key]
+                for pytype in MAPPING_TYPE_MAP:
+                    if isinstance(value, pytype):
+                        new_map[key] = MAPPING_TYPE_MAP[pytype]
+                        break
+        for record in INGEST_PIPELINES['processors']:
+            name = record['attachment']['target_field']
+            if name not in old_map:
+                new_map[name] = {
+                    'type': 'nested',
+                    'properties': {
+                        'content': MAPPING_TYPE_MAP[basestring],
+                        'content_length': MAPPING_TYPE_MAP[int],
+                        'content_type': MAPPING_TYPE_MAP[basestring],
+                        'language': MAPPING_TYPE_MAP[basestring],
+                    },
+                }
+        if not new_map:
+            return
+        new_map = {
+            'content': {
+                'properties': new_map,
+            }
+        }
+        es.indices.put_mapping(
+            doc_type='content',
+            index=index_name(),
+            body=new_map
+        )
 
     def _check_and_add_portal_to_index(self, portal):
         # at first portal is not in ES!
@@ -161,6 +232,7 @@ class ElasticSearchIndexQueueProcessor(object):
         self._reduce_data(data)
         self._expand_rid(obj, data)
         self._expand_binary_data(obj, data)
+        self._auto_mapping(es, obj, data)
         uid = api.content.get_uuid(obj)
         es_kwargs = dict(
             index=index_name(),
