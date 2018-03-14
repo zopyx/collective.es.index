@@ -94,6 +94,10 @@ class ElasticSearchIndexQueueProcessor(object):
         except NotFoundError:
             es.ingest.put_pipeline(self._es_pipeline_name, INGEST_PIPELINES)
 
+    def _check_for_mapping(self, es):
+        if not self._get_mapping(es):
+            raise ValueError('Can not fetch mapping.')
+
     def _get_mapping(self, es):
         request = getRequest()
         mapping = getattr(request, CACHE_ATTRIBUTE, None)
@@ -140,12 +144,12 @@ class ElasticSearchIndexQueueProcessor(object):
         new_map = {
             'content': {
                 'properties': new_map,
-            }
+            },
         }
         es.indices.put_mapping(
             doc_type='content',
             index=index_name(),
-            body=new_map
+            body=new_map,
         )
 
     def _check_and_add_portal_to_index(self, portal):
@@ -211,13 +215,14 @@ class ElasticSearchIndexQueueProcessor(object):
             )
             return
         self._check_for_ingest_pipeline(es)
+        self._check_for_mapping(es)  # will also create the index
         try:
             serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
         except ComponentLookupError:
             logger.exception(
                 'Abort ElasticSearch Indexing for {0}'.format(
-                    obj.absolute_url()
-                )
+                    obj.absolute_url(),
+                ),
             )
             return
         try:
@@ -225,8 +230,8 @@ class ElasticSearchIndexQueueProcessor(object):
         except ComponentLookupError:
             logger.exception(
                 'Abort ElasticSearch Indexing for {0}'.format(
-                    obj.absolute_url()
-                )
+                    obj.absolute_url(),
+                ),
             )
             return
         self._reduce_data(data)
