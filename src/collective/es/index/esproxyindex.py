@@ -175,7 +175,7 @@ class ElasticSearchProxyIndex(SimpleItem):
         if record.keys is None:
             return None
         template_params = {
-            'keys': record.keys
+            'keys': record.keys,
         }
         query_body = self._apply_template(template_params)
         logger.info(query_body)
@@ -184,14 +184,13 @@ class ElasticSearchProxyIndex(SimpleItem):
             body=query_body,
             size=BATCH_SIZE,
             scroll='1m',
-            _source_include=['rid', 'title'],
+            _source_include=['rid'],
         )
         es = get_query_client()
         result = es.search(**es_kwargs)
         # initial return value, other batches to be applied
 
         def score(record):
-            logger.info((record['_source']['title'], record['_score']))
             return int(10000 * float(record['_score']))
 
         retval = IIBTree()
