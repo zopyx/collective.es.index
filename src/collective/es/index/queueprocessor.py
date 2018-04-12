@@ -11,6 +11,7 @@ from plone.app.textfield.interfaces import IRichTextValue
 from plone.memoize import ram
 from plone.namedfile.interfaces import IBlobby
 from plone.restapi.interfaces import ISerializeToJson
+from pprint import pformat
 from zope.annotation import IAnnotations
 from zope.component import ComponentLookupError
 from zope.component import getMultiAdapter
@@ -120,13 +121,14 @@ class ElasticSearchIndexQueueProcessor(object):
         old_map = old_map.get('content', {}).get('properties', {})
         new_map = {}
         for key in data:
-            if key not in old_map:
-                # figure out field type
-                value = data[key]
-                for pytype in MAPPING_TYPE_MAP:
-                    if isinstance(value, pytype):
-                        new_map[key] = MAPPING_TYPE_MAP[pytype]
-                        break
+            if key in old_map:
+                continue
+            # figure out field type
+            value = data[key]
+            for pytype in MAPPING_TYPE_MAP:
+                if isinstance(value, pytype):
+                    new_map[key] = MAPPING_TYPE_MAP[pytype]
+                    break
         for record in INGEST_PIPELINES['processors']:
             name = record['attachment']['target_field']
             if name not in old_map:
@@ -151,6 +153,8 @@ class ElasticSearchIndexQueueProcessor(object):
             index=index_name(),
             body=new_map,
         )
+        request = getRequest()
+        setattr(request, CACHE_ATTRIBUTE, None)
 
     def _check_and_add_portal_to_index(self, portal):
         # at first portal is not in ES!
@@ -259,7 +263,12 @@ class ElasticSearchIndexQueueProcessor(object):
         try:
             es.index(**es_kwargs)
         except Exception:
-            logger.exception('indexing of {0} failed'.format(uid))
+            logger.exception(
+                'indexing of {0} failed.\n{1}'.format(
+                    uid,
+                    pformat(es_kwargs, indent=2)
+                )
+            )
 
     def reindex(self, obj, attributes=None, update_metadata=1):
         self.index(obj, attributes)
