@@ -4,6 +4,7 @@ from Acquisition import aq_parent
 from collective.es.index.interfaces import IElasticSearchIndexQueueProcessor
 from collective.es.index.utils import get_ingest_client
 from collective.es.index.utils import index_name
+from collective.es.index.utils import query_blocker
 from elasticsearch.exceptions import NotFoundError
 from elasticsearch.exceptions import TransportError
 from plone import api
@@ -26,7 +27,6 @@ import uuid
 
 
 logger = logging.getLogger('collective.es.index')
-
 
 ES_PORTAL_UUID_KEY = 'collective.es.index.portal_uuid'
 CACHE_ATTRIBUTE = '_collective_elasticsearch_mapping_cache_'
@@ -212,6 +212,7 @@ class ElasticSearchIndexQueueProcessor(object):
         data['rid'] = cat.getrid(path)
 
     def index(self, obj, attributes=None):
+        query_blocker.block()
         es = get_ingest_client()
         if es is None:
             logger.warning(
@@ -269,6 +270,7 @@ class ElasticSearchIndexQueueProcessor(object):
                     pformat(es_kwargs, indent=2)
                 )
             )
+        query_blocker.unblock()
 
     def reindex(self, obj, attributes=None, update_metadata=1):
         self.index(obj, attributes)

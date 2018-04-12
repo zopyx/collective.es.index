@@ -4,6 +4,7 @@ from AccessControl.requestmethod import postonly
 from BTrees.IIBTree import IIBTree
 from collective.es.index.utils import get_query_client
 from collective.es.index.utils import index_name
+from collective.es.index.utils import query_blocker
 from Globals import InitializeClass
 from OFS.SimpleItem import SimpleItem
 from Products.GenericSetup.interfaces import ISetupEnviron
@@ -17,7 +18,6 @@ from zope.interface import implementer
 import jinja2
 import json
 import logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +171,8 @@ class ElasticSearchProxyIndex(SimpleItem):
         records.  The second object is a tuple containing the names of
         all data fields used.
         """
+        if query_blocker.blocked:
+            return
         record = parseIndexRequest(request, self.id)
         if record.keys is None:
             return None
