@@ -11,6 +11,8 @@ TODOs & Nice-to-haves
 
 - figure out how to influence restapi serializers for specific behaviors/types.
 
+- prevent using SearchableText index while indexing collections
+
 - documentation
 
 - more tests
