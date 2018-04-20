@@ -247,7 +247,7 @@ class ElasticSearchProxyIndex(SimpleItem):
         """Return an object that supports __getitem__ and may be used to
         quickly lookup the sort key given a document id"""
 
-        # XXX no idea when this is called.
+        # We can not implement this afaik
 
     ###########################################################################
     #  private helper methods

@@ -286,7 +286,7 @@ class ElasticSearchIndexQueueProcessor(object):
         try:
             es.delete(
                 index=index_name(),
-                doc_type='content',  # XXX why do we still need it in ES6+?
+                doc_type='content',
                 id=uid,
             )
         except Exception:
