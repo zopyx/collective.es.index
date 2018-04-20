@@ -19,6 +19,7 @@ import jinja2
 import json
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 jinja_loader = jinja2.Environment(loader=jinja2.BaseLoader)
