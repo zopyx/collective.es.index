@@ -267,8 +267,8 @@ class ElasticSearchIndexQueueProcessor(object):
             logger.exception(
                 'indexing of {0} failed.\n{1}'.format(
                     uid,
-                    pformat(es_kwargs, indent=2)
-                )
+                    pformat(es_kwargs, indent=2),
+                ),
             )
         query_blocker.unblock()
 
