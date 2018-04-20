@@ -200,6 +200,8 @@ class ElasticSearchProxyIndex(SimpleItem):
             retval[r['_source']['rid']] = score(r)
 
         total = result['hits']['total']
+        if total == 0:
+            return None
         if total > BATCH_SIZE:
             sid = result['_scroll_id']
             counter = BATCH_SIZE
