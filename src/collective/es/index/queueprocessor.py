@@ -171,7 +171,7 @@ class ElasticSearchIndexQueueProcessor(object):
         self._reduce_data(data)
         es_kwargs = dict(
             index=index_name(),
-            doc_type='content',  # XXX why do we still need it in ES6+?
+            doc_type='content',  # why do we still need it in ES6+?
             id=uid,
             body=data,
         )
@@ -246,7 +246,7 @@ class ElasticSearchIndexQueueProcessor(object):
         uid = api.content.get_uuid(obj)
         es_kwargs = dict(
             index=index_name(),
-            doc_type='content',  # XXX why do we still need it in ES6+?
+            doc_type='content',
             id=uid,
             pipeline=self._es_pipeline_name,
             body=data,
