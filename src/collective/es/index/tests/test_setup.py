@@ -21,10 +21,10 @@ class TestSetup(unittest.TestCase):
     def test_product_installed(self):
         """Test if collective.es.index is installed."""
         self.assertTrue(
-            self.installer.isProductInstalled('collective.es.index')
+            self.installer.isProductInstalled('collective.es.index'),
         )
         st_index = self.portal.portal_catalog._catalog.getIndex(
-            'SearchableText'
+            'SearchableText',
         )
         self.assertEqual(st_index.meta_type, 'ElasticSearchProxyIndex')
 
@@ -45,6 +45,6 @@ class TestUninstall(unittest.TestCase):
             self.installer.isProductInstalled('collective.es.index'),
         )
         st_index = self.portal.portal_catalog._catalog.getIndex(
-            'SearchableText'
+            'SearchableText',
         )
         self.assertEqual(st_index.meta_type, 'ZCTextIndex')

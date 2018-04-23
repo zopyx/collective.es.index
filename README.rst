@@ -6,37 +6,22 @@
 collective.es.index
 ===================
 
-Tell me what your product does
+ElasticSearch Indexer for Plone content
 
 Features
 --------
 
-- Can be bullet points
-
-
-Examples
---------
-
-This add-on can be seen in action at the following sites:
-- Is there a page on the internet where everybody can see the features?
-
-
-Documentation
--------------
-
-Full documentation for end users can be found in the "docs" folder, and is also available online at http://docs.plone.org/foo/bar
-
-
-Translations
-------------
-
-This product has been translated into
-
-- Klingon (thanks, K'Plai)
+- Indexes full content in ElasticSearch on a field base
+- uses serializers of ``plone.restapi`` to get the JSON for indexing
+- configuration of ElasticSearch via ``zope.conf`` (buildout)
+- flexible drop-in replacement proxy-index for the catalog (optional)
+- default profile installs SearchableText drop-in (optional)
 
 
 Installation
 ------------
+
+This addon needs ElasticSearch 6.2 with `ingest-attachment plugin <https://www.elastic.co/guide/en/elasticsearch/plugins/6.2/ingest-attachment.html>`_ installed.
 
 Install collective.es.index by adding it to your buildout::
 
@@ -47,23 +32,54 @@ Install collective.es.index by adding it to your buildout::
     eggs =
         collective.es.index
 
+also there, configure the connection to ElasticSearch::
 
-and then running ``bin/buildout``
+    [instance]
+
+    ...
+
+    zope-conf-additional =
+         %import collective.es.index
+         <elasticsearch>
+         query 127.0.0.1:9200
+         ingest 127.0.0.1:9200
+         </elasticsearch>
+
+and then running ``bin/buildout``.
+
+To install the default drop-in proxy-index for ``SearchableText``,
+go to the Site-Setup Add-Ons section and install ``ElasticSearch SearchableText Proxy Index``.
+
+New content will be indexed in ElasticSearch.
+
+To index existing content, a full ``Clear and Rebuild`` is needed (via ZMI/``portal_catalog``/Tab ``Advanced``).
 
 
-Contribute
-----------
+Source Code
+-----------
 
-- Issue Tracker: https://github.com/collective/collective.es.index/issues
-- Source Code: https://github.com/collective/collective.es.index
-- Documentation: https://docs.plone.org/foo/bar
+The sources are in a GIT DVCS with its main branches at `github <http://github.com/collective/collective.es.index>`_.
+There you can report issue too.
+
+We'd be happy to see many forks and pull-requests to make this addon even better.
+
+Maintainers are `Jens Klein <mailto:jk@kleinundpartner.at>`_, `Peter Holzer <mailto:peter.holzer@agitator.com>`_ and the BlueDynamics Alliance developer team.
+We appreciate any contribution and if a release is needed to be done on pypi, please just contact one of us.
+We also offer commercial support if any training, coaching, integration or adaptions are needed.
 
 
-Support
--------
+Contributions
+-------------
 
-If you are having issues, please let us know.
-We have a mailing list located at: project@example.com
+Initial implementation was made possible by `Evangelisch-reformierte Landeskirche des Kantons Zürich <http://zhref.ch/>`_.
+
+Idea and testing: Peter Holzer
+
+Concept & code by Jens W. Klein
+
+Authors:
+
+- no others so far
 
 
 License

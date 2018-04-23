@@ -12,7 +12,7 @@
 
   <genericsetup:registerProfile
       name="default"
-      title="ElasticSearch Searchable Text Proxy Index"
+      title="ElasticSearch SearchableText Proxy Index"
       directory="profiles/default"
       description="Installs a drop-in replacement for the SearchableText Index querying against a ElasticSearch.
                    The indexer itself is active w/o this installed. Depending on your needs you may not need to install this profile."
@@ -22,7 +22,7 @@
 
   <genericsetup:registerProfile
       name="uninstall"
-      title="ElasticSearch Searchable Text Proxy Index (uninstall)"
+      title="ElasticSearch SearchableText Proxy Index (uninstall)"
       directory="profiles/uninstall"
       description="Uninstalls the collective.es.index add-on."
       provides="Products.GenericSetup.interfaces.EXTENSION"

@@ -1,7 +1,7 @@
 TODOs & Nice-to-haves
 ---------------------
 
-- Blacklisting via registry
+- Blacklisting via registry (currently in code)
 
 - mapping configuration via registry - flexible
 
@@ -11,8 +11,10 @@ TODOs & Nice-to-haves
 
 - figure out how to influence restapi serializers for specific behaviors/types.
 
-- prevent using SearchableText index while indexing collections
+- do not index listings of folderish types and collections
 
-- documentation
+- better documentation
+
+- figure out how to handle handle `getEntryForObject` in proxy-index
 
 - more tests
