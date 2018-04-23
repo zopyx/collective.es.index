@@ -10,21 +10,19 @@
 
   <i18n:registerTranslations directory="locales" />
 
-  <include package=".browser" />
-
-
   <genericsetup:registerProfile
       name="default"
-      title="ElasticSearch Indexer"
+      title="ElasticSearch Searchable Text Proxy Index"
       directory="profiles/default"
-      description="Installs the collective.es.index add-on."
+      description="Installs a drop-in replacement for the SearchableText Index querying against a ElasticSearch.
+                   The indexer itself is active w/o this installed. Depending on your needs you may not need to install this profile."
       provides="Products.GenericSetup.interfaces.EXTENSION"
       post_handler=".setuphandlers.post_install"
       />
 
   <genericsetup:registerProfile
       name="uninstall"
-      title="ElasticSearch Indexer (uninstall)"
+      title="ElasticSearch Searchable Text Proxy Index (uninstall)"
       directory="profiles/uninstall"
       description="Uninstalls the collective.es.index add-on."
       provides="Products.GenericSetup.interfaces.EXTENSION"

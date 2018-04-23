@@ -201,8 +201,6 @@ class ElasticSearchProxyIndex(SimpleItem):
             retval[r['_source']['rid']] = score(r)
 
         total = result['hits']['total']
-        if total == 0:
-            return None
         if total > BATCH_SIZE:
             sid = result['_scroll_id']
             counter = BATCH_SIZE
@@ -211,8 +209,7 @@ class ElasticSearchProxyIndex(SimpleItem):
                 for record in result['hits']['hits']:
                     retval[record['_source']['rid']] = score(record)
                 counter += BATCH_SIZE
-        if retval:
-            return retval, (self.id,)
+        return retval, (self.id,)
 
     def numObjects(self):
         """Return the number of indexed objects."""

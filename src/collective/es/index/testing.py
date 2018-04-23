@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from plone.app.contenttypes.testing import PLONE_APP_CONTENTTYPES_FIXTURE
 from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
-from plone.app.testing import applyProfile
 from plone.app.testing import FunctionalTesting
 from plone.app.testing import IntegrationTesting
 from plone.app.testing import PloneSandboxLayer
@@ -19,6 +18,7 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
         # The z3c.autoinclude feature is disabled in the Plone fixture base
         # layer.
         self.loadZCML(package=collective.es.index)
+        z2.installProduct(app, 'collective.es.index')
 
     def setUpPloneSite(self, portal):
         # provide an ES connection
@@ -32,9 +32,6 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
         )
         directlyProvides(es, IElasticSearchClient)
         provideUtility(es)
-
-        # load profile
-        applyProfile(portal, 'collective.es.index:default')
 
 
 COLLECTIVE_ES_INDEX_FIXTURE = CollectiveEsIndexLayer()

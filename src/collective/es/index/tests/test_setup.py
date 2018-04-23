@@ -2,6 +2,7 @@
 """Setup tests for this package."""
 from collective.es.index.testing import COLLECTIVE_ES_INDEX_INTEGRATION_TESTING
 from plone import api
+from plone.app.testing import applyProfile
 
 import unittest
 
@@ -15,17 +16,17 @@ class TestSetup(unittest.TestCase):
         """Custom shared utility setup for tests."""
         self.portal = self.layer['portal']
         self.installer = api.portal.get_tool('portal_quickinstaller')
+        applyProfile(self.portal, 'collective.es.index:default')
 
     def test_product_installed(self):
         """Test if collective.es.index is installed."""
-        self.assertTrue(self.installer.isProductInstalled(
-            'collective.es.index'))
-
-    def test_browserlayer(self):
-        """Test that ICollectiveEsIndexLayer is registered."""
-        from collective.es.index.interfaces import ICollectiveEsIndexLayer
-        from plone.browserlayer import utils
-        self.assertIn(ICollectiveEsIndexLayer, utils.registered_layers())
+        self.assertTrue(
+            self.installer.isProductInstalled('collective.es.index')
+        )
+        st_index = self.portal.portal_catalog._catalog.getIndex(
+            'SearchableText'
+        )
+        self.assertEqual(st_index.meta_type, 'ElasticSearchProxyIndex')
 
 
 class TestUninstall(unittest.TestCase):
@@ -35,6 +36,7 @@ class TestUninstall(unittest.TestCase):
     def setUp(self):
         self.portal = self.layer['portal']
         self.installer = api.portal.get_tool('portal_quickinstaller')
+        applyProfile(self.portal, 'collective.es.index:default')
         self.installer.uninstallProducts(['collective.es.index'])
 
     def test_product_uninstalled(self):
@@ -42,9 +44,7 @@ class TestUninstall(unittest.TestCase):
         self.assertFalse(
             self.installer.isProductInstalled('collective.es.index'),
         )
-
-    def test_browserlayer_removed(self):
-        """Test that ICollectiveEsIndexLayer is removed."""
-        from collective.es.index.interfaces import ICollectiveEsIndexLayer
-        from plone.browserlayer import utils
-        self.assertNotIn(ICollectiveEsIndexLayer, utils.registered_layers())
+        st_index = self.portal.portal_catalog._catalog.getIndex(
+            'SearchableText'
+        )
+        self.assertEqual(st_index.meta_type, 'ZCTextIndex')
