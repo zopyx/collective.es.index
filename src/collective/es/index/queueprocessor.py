@@ -265,11 +265,11 @@ class ElasticSearchIndexQueueProcessor(object):
             es.index(**es_kwargs)
         except Exception:
             logger.exception(
-                'indexing of {0} failed.\n{1}'.format(
+                'indexing of {0} failed.'.format(
                     uid,
-                    pformat(es_kwargs, indent=2),
                 ),
             )
+            logger.debug(pformat(es_kwargs, indent=2))
         query_blocker.unblock()
 
     def reindex(self, obj, attributes=None, update_metadata=1):
