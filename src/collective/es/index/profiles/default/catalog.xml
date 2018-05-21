@@ -11,9 +11,9 @@
                 "title^1.2",
                 "description^1.1",
                 "subjects^2",
-                "extracted_text",
-                "extracted_file",
-                "extracted_image"
+                "extracted_text.content",
+                "extracted_file.content",
+                "extracted_image.content"
             ]
         }
     }

@@ -133,7 +133,6 @@ class ElasticSearchIndexQueueProcessor(object):
             name = record['attachment']['target_field']
             if name not in old_map:
                 new_map[name] = {
-                    'type': 'nested',
                     'properties': {
                         'content': MAPPING_TYPE_MAP[basestring],
                         'content_length': MAPPING_TYPE_MAP[int],
