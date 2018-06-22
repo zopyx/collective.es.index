@@ -2,9 +2,12 @@
 from Acquisition import aq_base
 from Acquisition import aq_parent
 from collective.es.index.interfaces import IElasticSearchIndexQueueProcessor
+from collective.es.index.utils import get_configuration
 from collective.es.index.utils import get_ingest_client
 from collective.es.index.utils import index_name
 from collective.es.index.utils import query_blocker
+from collective.es.index.tasks import index_content
+from collective.es.index.tasks import unindex_content
 from elasticsearch.exceptions import NotFoundError
 from elasticsearch.exceptions import TransportError
 from plone import api
@@ -63,6 +66,21 @@ INGEST_PIPELINES = {
                 'ignore_missing': True,
             },
         },
+        {
+            'remove': {
+                'field': 'file',
+            },
+        },
+        {
+            'remove': {
+                'field': 'text',
+            },
+        },
+        {
+            'remove': {
+                'field': 'image',
+            },
+        },
     ],
 }
 
@@ -74,6 +92,8 @@ MAPPING_TYPE_MAP = collections.OrderedDict([
     (basestring, {'type': 'text'}),
     (dict, {'type': 'object'}),
 ])
+
+es_config = get_configuration()
 
 
 @implementer(IElasticSearchIndexQueueProcessor)
@@ -130,6 +150,8 @@ class ElasticSearchIndexQueueProcessor(object):
                     new_map[key] = MAPPING_TYPE_MAP[pytype]
                     break
         for record in INGEST_PIPELINES['processors']:
+            if 'attachment' not in record:
+                continue
             name = record['attachment']['target_field']
             if name not in old_map:
                 new_map[name] = {
@@ -187,14 +209,19 @@ class ElasticSearchIndexQueueProcessor(object):
 
     def _iterate_binary_fields(self, obj, data):
         for record in INGEST_PIPELINES['processors']:
+            if 'attachment' not in record:
+                continue
             yield record['attachment']['field']
 
     def _expand_binary_data(self, obj, data):
+        max_size = es_config.max_blobsize
         for fieldname in self._iterate_binary_fields(obj, data):
             if fieldname not in data:
+                data[fieldname] = None
                 continue
             field = getattr(obj, fieldname, None)
             if field is None:
+                data[fieldname] = None
                 continue
             data[fieldname + '_meta'] = data[fieldname]
             if IBlobby.providedBy(field):
@@ -203,6 +230,14 @@ class ElasticSearchIndexQueueProcessor(object):
             elif IRichTextValue.providedBy(field):
                 data[fieldname] = base64.b64encode(
                     data[fieldname + '_meta']['data'].encode('utf8'),
+                )
+            if max_size and len(data[fieldname]) > max_size:
+                data[fieldname] = None
+                del data[fieldname + '_meta']
+                logger.info(
+                    'File too big for ElasticSearch Indexing: {0}'.format(
+                        obj.absolute_url(),
+                    ),
                 )
 
     def _expand_rid(self, obj, data):
@@ -249,6 +284,7 @@ class ElasticSearchIndexQueueProcessor(object):
             id=uid,
             pipeline=self._es_pipeline_name,
             body=data,
+            request_timeout=es_config.request_timeout,
         )
         parent = aq_parent(obj)
         portal = api.portal.get()
@@ -260,36 +296,50 @@ class ElasticSearchIndexQueueProcessor(object):
         else:
             # es_kwargs['parent'] = api.content.get_uuid(parent)
             pass
-        try:
-            es.index(**es_kwargs)
-        except Exception:
-            logger.exception(
-                'indexing of {0} failed.'.format(
-                    uid,
-                ),
-            )
-            logger.debug(pformat(es_kwargs, indent=2))
+        if es_config.use_celery:
+            index_content.delay(obj.absolute_url(), es_kwargs)
+        else:
+            try:
+                es.index(**es_kwargs)
+            except Exception:
+                logger.exception(
+                    'indexing of {0} failed.'.format(
+                        uid,
+                    ),
+                )
+                import Globals
+                if Globals.DevelopmentMode:
+                    logger.debug(pformat(es_kwargs, indent=2))
         query_blocker.unblock()
 
     def reindex(self, obj, attributes=None, update_metadata=1):
         self.index(obj, attributes)
 
     def unindex(self, obj):
-        es = get_ingest_client()
-        if es is None:
-            logger.warning(
-                'No ElasticSearch client available.',
-            )
-            return
         uid = api.content.get_uuid(obj)
-        try:
-            es.delete(
+        if es_config.use_celery:
+            unindex_content.delay(
                 index=index_name(),
                 doc_type='content',
-                id=uid,
+                uid=uid,
+                timeout=es_config.request_timeout,
             )
-        except Exception:
-            logger.exception('unindexing of {0} failed'.format(uid))
+        else:
+            es = get_ingest_client()
+            if es is None:
+                logger.warning(
+                    'No ElasticSearch client available.',
+                )
+                return
+            try:
+                es.delete(
+                    index=index_name(),
+                    doc_type='content',
+                    id=uid,
+                    request_timeout=es_config.request_timeout,
+                )
+            except Exception:
+                logger.exception('unindexing of {0} failed'.format(uid))
 
     def begin(self):
         pass

@@ -1,0 +1,101 @@
+ES configuration on zope.conf
+-----------------------------
+
+The elasticsearch directive now supports the following keys:
+
+- max_blobsize. Max length of files to index, in bytes. If a file is
+  larger than this size, it will not be indexed, and this will be logged.
+  Default is zero, which means index everything.
+
+- request_timeout. The default connection timeout is 10 seconds. Using this
+  key it can be set to any number of seconds.
+
+- use_celery. If true, indexing will be done in async celery tasks. This
+  requires that celery is correctly configured.
+
+Example:
+
+zope-conf-additional =
+    %import collective.es.index
+    <elasticsearch>
+    query 127.0.0.1:92000
+    ingest 127.0.0.1:92000
+    request_timeout 20
+    max_blobsize 10000000 # 10 MB
+    use_celery true
+    </elasticsearch>
+
+It is necessary to add this configuration to the buildout and rerun it
+whenever a change is made to these parameters.
+
+Celery configuration
+--------------------
+
+NOTE: this configuration setup conflicts with collective.celery. We
+will not be using that package going forward. Please be sure to remove it
+from the buildout eggs.
+
+The easiest way to get celery correctly configured is to use the
+collective.recipe.celery buildout recipe. This requires adding the
+following parts to the buildout (note that since redis is already part
+of our setup, we use it as broker for celery too):
+
+[celery-broker]
+host = 127.0.0.1
+port = 6379
+
+[celery]
+recipe = collective.recipe.celery
+broker-transport = redis
+broker-host = ${celery-broker:host}
+broker-port = ${celery-broker:port}
+result-backend = redis
+result-dburi = redis://${celery-broker:host}:${celery-broker:port}
+eggs =
+    flower
+    redis
+    ${buildout:eggs}
+imports =
+# Celery task imports here
+    collective.es.index.tasks
+additional-config =
+    import os
+    os.environ['CELERY_BROKER'] = '${celery:result-dburi}'
+    os.environ['ZOPE_CONFIG'] = 'parts/client1/etc/zope.conf'
+    BROKER_URL = '${celery:result-dburi}'
+    CELERY_IGNORE_RESULT = True
+    CELERY_STORE_ERRORS_EVEN_IF_IGNORED = True
+    CELERY_SEND_TASK_ERROR_EMAILS = True
+    ADMINS = (
+        ('Carlos de la Guardia', 'carlos.delaguardia@gmail.com'),
+    )
+
+Make sure to change the ADMINS configuration parameter above. Only the
+celery part needs to be listed under the buildout parts.
+
+This recipe generates a celeryconfig.py file under parts/celery. This
+file can be used in a non-buildout setup (it needs to be in the celery
+sys.path).
+
+Monitoring celery tasks
+-----------------------
+
+Celery needs to be started as an independent process. It's recommended to
+use supervisord for this. To try it out from the command line, you can run
+"bin/celery worker -B" from the buildout directory.
+
+Flower is included in this setup. Run "bin/flower" from the buildout
+directory and consult the dashboard at http://localhost:5555 using a
+browser.
+
+Removing b64 attribute
+----------------------
+
+To get the b64 attribute removal working on an existing elasticsearch
+install, it's necessary to clear the old ingest pipeline, so that 
+collective.es.index can install the new one. To do this, you can use a
+python prompt, like this:
+
+>>> from elasticsearch import Elasticsearch
+>>> es = Elasticsearch()
+>>> es.ingest.delete_pipeline('attachment_ingest_plone_plone') 

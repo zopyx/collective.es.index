@@ -34,6 +34,14 @@ def get_ingest_client():
         return es.ingest
 
 
+def get_configuration():
+    """Get zope.conf elasticsearch configuration
+    """
+    es = _get_elastic_search_client()
+    if es:
+        return es.zope_configuration
+
+
 def remove_index():
     es = get_ingest_client()
     if es.indices.exists(index=INDEX):

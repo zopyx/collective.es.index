@@ -38,6 +38,23 @@
       Provide a path to CA certs on disk?
       </description>
     </key>
+    <key name="max_blobsize" datatype="integer" default="0">
+      <description>
+      Max allowed file size in bytes. Zero means any size. If set, files
+      larger than this size will not be indexed.
+      </description>
+    </key>
+    <key name="request_timeout" datatype="integer" default="10">
+      <description>
+      Timeout to use for all search connection requests. Default is
+      10 seconds.
+      </description>
+    </key>
+    <key name="use_celery" datatype="boolean" default="false">
+      <description>
+      Use celery for async indexing.
+      </description>
+    </key>
   </sectiontype>
 
 </component>

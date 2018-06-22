@@ -2,6 +2,7 @@
 from AccessControl import ClassSecurityInfo
 from AccessControl.requestmethod import postonly
 from BTrees.IIBTree import IIBTree
+from collective.es.index.utils import get_configuration
 from collective.es.index.utils import get_query_client
 from collective.es.index.utils import index_name
 from collective.es.index.utils import query_blocker
@@ -172,6 +173,7 @@ class ElasticSearchProxyIndex(SimpleItem):
         records.  The second object is a tuple containing the names of
         all data fields used.
         """
+        config = get_configuration()
         if query_blocker.blocked:
             return
         record = parseIndexRequest(request, self.id)
@@ -188,6 +190,7 @@ class ElasticSearchProxyIndex(SimpleItem):
             size=BATCH_SIZE,
             scroll='1m',
             _source_include=['rid'],
+            request_timeout = config.request_timeout,
         )
         es = get_query_client()
         result = es.search(**es_kwargs)

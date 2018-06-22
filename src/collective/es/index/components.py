@@ -23,6 +23,9 @@ class ElasticSearchIngressConfFactory(object):
         self.ca_certs = self.section.ca_certs
         self.client_cert = self.section.client_cert
         self.client_key = self.section.client_key
+        self.request_timeout = self.section.request_timeout
+        self.max_blobsize = self.section.max_blobsize
+        self.use_celery = self.section.use_celery
 
     def create(self):
         base_client = Elasticsearch(
@@ -36,5 +39,6 @@ class ElasticSearchIngressConfFactory(object):
             # here some more params need to be configured.
         )
         base_client.ingest = ingest_client
+        base_client.zope_configuration = self.section
         directlyProvides(base_client, IElasticSearchClient)
         provideUtility(base_client)
