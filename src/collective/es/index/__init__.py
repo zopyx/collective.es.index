@@ -3,6 +3,9 @@
 from zope.i18nmessageid import MessageFactory
 
 
+TESTING = False
+
+
 _ = MessageFactory('collective.es.index')
 
 

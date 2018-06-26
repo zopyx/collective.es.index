@@ -151,7 +151,7 @@ def zope_task(**task_kw):
     return wrap
 
 
-@zope_task()
+@zope_task(base=AfterCommitTask)
 def index_content(portal, url, data):
     logger.warning('Indexing {}'.format(url))
     es = get_ingest_client()
@@ -169,7 +169,7 @@ def index_content(portal, url, data):
     logger.warning('Finished indexing {}'.format(url))
 
 
-@zope_task()
+@zope_task(base=AfterCommitTask)
 def unindex_content(portal, index, doc_type, uid, timeout):
     logger.warning('Unindexing {}'.format(uid))
     es = get_ingest_client()
@@ -177,7 +177,10 @@ def unindex_content(portal, index, doc_type, uid, timeout):
         logger.warning('Elasticsearch client not found for indexing.')
         return
     try:
-        es.delete(index=index, doc_type=doc_type, id=uid, request_timeout=timeout)
+        es.delete(index=index,
+                  doc_type=doc_type,
+                  id=uid,
+                  request_timeout=timeout)
     except NotFoundError:
         logger.warning('Content already unindexed.')
         pass
