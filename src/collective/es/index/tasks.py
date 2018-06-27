@@ -6,6 +6,7 @@ from Testing.makerequest import makerequest
 from ZODB.POSException import ConflictError
 from celery import Celery, Task
 from elasticsearch.exceptions import NotFoundError
+from kombu.exceptions import OperationalError
 from kombu.utils import uuid as kombu_uuid
 from transaction.interfaces import ISynchronizer
 from zope.app.publication.interfaces import BeforeTraverseEvent
@@ -44,11 +45,18 @@ class CelerySynchronizer(object):
             return False
         if txn.status == transaction._transaction.Status.COMMITTED:
             tasks = getattr(txn, '_celery_tasks', [])
-            for task, args, kw in tasks:
-                Task.apply_async(task, *args, **kw)
+            try:
+                for task, args, kw in tasks:
+                    Task.apply_async(task, *args, **kw)
+            except OperationalError:
+                logger.exception(
+                    'Celery broker unavailable for {0}.'.format(
+                        task,
+                    ),
+                )
 
     def newTransaction(self, txn):
-        txn._celery_tasks = []
+        pass
 
 # It's important that we assign the synchronizer to a variable,
 # because the transaction manager stores it using a weak reference.
@@ -151,7 +159,7 @@ def zope_task(**task_kw):
     return wrap
 
 
-@zope_task(base=AfterCommitTask)
+@zope_task(name='indexer', base=AfterCommitTask)
 def index_content(portal, url, data):
     logger.warning('Indexing {}'.format(url))
     es = get_ingest_client()
@@ -169,7 +177,7 @@ def index_content(portal, url, data):
     logger.warning('Finished indexing {}'.format(url))
 
 
-@zope_task(base=AfterCommitTask)
+@zope_task(name='unindexer', base=AfterCommitTask)
 def unindex_content(portal, index, doc_type, uid, timeout):
     logger.warning('Unindexing {}'.format(uid))
     es = get_ingest_client()

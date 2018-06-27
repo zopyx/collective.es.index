@@ -29,6 +29,8 @@ import logging
 import uuid
 
 
+es_config = get_configuration()
+
 logger = logging.getLogger('collective.es.index')
 
 ES_PORTAL_UUID_KEY = 'collective.es.index.portal_uuid'
@@ -49,6 +51,7 @@ INGEST_PIPELINES = {
             'attachment': {
                 'field': 'text',
                 'target_field': 'extracted_text',
+                'indexed_chars': es_config.indexed_chars,
                 'ignore_missing': True,
             },
         },
@@ -56,6 +59,7 @@ INGEST_PIPELINES = {
             'attachment': {
                 'field': 'file',
                 'target_field': 'extracted_file',
+                'indexed_chars': es_config.indexed_chars,
                 'ignore_missing': True,
             },
         },
@@ -63,6 +67,7 @@ INGEST_PIPELINES = {
             'attachment': {
                 'field': 'image',
                 'target_field': 'extracted_image',
+                'indexed_chars': es_config.indexed_chars,
                 'ignore_missing': True,
             },
         },
@@ -92,8 +97,6 @@ MAPPING_TYPE_MAP = collections.OrderedDict([
     (basestring, {'type': 'text'}),
     (dict, {'type': 'object'}),
 ])
-
-es_config = get_configuration()
 
 
 @implementer(IElasticSearchIndexQueueProcessor)
@@ -253,8 +256,16 @@ class ElasticSearchIndexQueueProcessor(object):
                 'No ElasticSearch client available.',
             )
             return
-        self._check_for_ingest_pipeline(es)
-        self._check_for_mapping(es)  # will also create the index
+        try:
+            self._check_for_ingest_pipeline(es)
+            self._check_for_mapping(es)  # will also create the index
+        except TransportError:
+            logger.exception(
+                'ElasticSearch connection failed for {0}'.format(
+                    obj.absolute_url(),
+                ),
+            )
+            return
         try:
             serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
         except ComponentLookupError:

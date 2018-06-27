@@ -13,6 +13,9 @@ The elasticsearch directive now supports the following keys:
 - use_celery. If true, indexing will be done in async celery tasks. This
   requires that celery is correctly configured.
 
+- indexed_chars. Maximum number of characters to extract from attachments.
+  Default is 100,000. Use -1 for infinite.
+
 Example:
 
 zope-conf-additional =
@@ -22,6 +25,7 @@ zope-conf-additional =
     ingest 127.0.0.1:92000
     request_timeout 20
     max_blobsize 10000000 # 10 MB
+    indexed_chars 200000
     use_celery true
     </elasticsearch>
 

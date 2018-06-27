@@ -50,6 +50,12 @@
       10 seconds.
       </description>
     </key>
+    <key name="indexed_chars" datatype="integer" default="100000">
+      <description>
+      Maximum number of characters to extract from attachments. Default is
+      100,000. For unlimited characters, use -1.
+      </description>
+    </key>
     <key name="use_celery" datatype="boolean" default="false">
       <description>
       Use celery for async indexing.
