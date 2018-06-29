@@ -38,8 +38,5 @@
       factory=".queueprocessor.ElasticSearchIndexQueueProcessor"
       name="collective.es.index"
       />
-  <adapter
-      factory=".esproxyindex.IndexNodeAdapter"
-  />
 
 </configure>

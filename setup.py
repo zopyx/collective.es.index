@@ -15,7 +15,7 @@ setup(
     install_requires=[
         'redis',
         'celery',
-        'elasticsearch',
+        'elasticsearch-dsl',
         'plone.restapi',
         'jinja2',
     ],

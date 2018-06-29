@@ -1,36 +1,43 @@
 # -*- coding: utf-8 -*-
 from AccessControl import ClassSecurityInfo
-from AccessControl.requestmethod import postonly
 from BTrees.IIBTree import IIBTree
+from BTrees.OOBTree import OOBTree
 from collective.es.index.utils import get_configuration
 from collective.es.index.utils import get_query_client
 from collective.es.index.utils import index_name
 from collective.es.index.utils import query_blocker
+from elasticsearch.exceptions import TransportError
+from elasticsearch_dsl import Search
 from Globals import InitializeClass
 from OFS.SimpleItem import SimpleItem
-from Products.GenericSetup.interfaces import ISetupEnviron
-from Products.GenericSetup.utils import NodeAdapterBase
+from Products.CMFCore.interfaces import IIndexQueueProcessor
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 from Products.PluginIndexes.common.util import parseIndexRequest
 from Products.PluginIndexes.interfaces import ISortIndex
-from zope.component import adapter
+from zope.annotation.interfaces import IAnnotations
+from zope.component import queryUtility
 from zope.interface import implementer
 
-import jinja2
-import json
 import logging
 
 
 logger = logging.getLogger(__name__)
 
-jinja_loader = jinja2.Environment(loader=jinja2.BaseLoader)
-
-VIEW_PERMISSION = 'View'
-MGMT_PERMISSION = 'Manage ZCatalogIndex Entries'
-
 manage_addESPIndexForm = PageTemplateFile('www/addIndex', globals())
 
 BATCH_SIZE = 500
+
+FRAGMENT_SIZE = 50
+
+SEARCH_FIELDS = ('title^1.2',
+                 'description^1.1',
+                 'subjects^2',
+                 'extracted_text.content',
+                 'extracted_file.content',
+                 'extracted_image.content',
+                 )
+
+HIGHLIGHT_KEY = 'collective.es.index.highlight'
 
 
 # Hint for my future self: When copying this code, never name it
@@ -65,50 +72,16 @@ class ElasticSearchProxyIndex(SimpleItem):
     query_options = ('query',)
 
     manage_main = PageTemplateFile('www/manageIndex', globals())
-    manage_options = (
-        {
-            'label': 'Settings',
-            'action': 'manage_main',
-        },
-    )
 
     def __init__(
         self,
         id,
         ignore_ex=None,
         call_methods=None,
-        extra=None,
         caller=None,
     ):
         self.id = id
         self.caller = caller
-        if extra is None:
-            return
-        try:
-            self.query_template = extra.query_template
-        except AttributeError:
-            try:
-                # alternative: allow a dict (lowers bootstrapping effort
-                # from code)
-                self.query_template = extra['query_template']
-            except KeyError:
-                raise ValueError(
-                    'ElasticSearchProxyIndex needs "extra" kwarg with key or '
-                    'attribute "query_template".',
-                )
-
-    @security.protected(MGMT_PERMISSION)
-    @postonly
-    def manage_ESPIndexExtras(self, REQUEST):
-        """stores changed extras """
-        self.query_template = REQUEST.form['extra']['query_template']
-        REQUEST['RESPONSE'].redirect(
-            '{0}/manage_catalogIndexes?manage_tabs_message=Updated '
-            'index settings for {1}'.format(
-                self.aq_parent.absolute_url(),
-                self.id,
-            ),
-        )
 
     ###########################################################################
     # Methods we dont need to implement, from IPluginIndex.
@@ -116,6 +89,9 @@ class ElasticSearchProxyIndex(SimpleItem):
     ###########################################################################
 
     def index_object(self, documentId, obj, threshold=None):
+        indexer = queryUtility(IIndexQueueProcessor, name='collective.es.index')
+        doc = obj._IndexableObjectWrapper__object
+        indexer.index(doc)
         return 0
 
     def unindex_object(self, documentId):
@@ -179,50 +155,58 @@ class ElasticSearchProxyIndex(SimpleItem):
         record = parseIndexRequest(request, self.id)
         if record.keys is None:
             return None
-        template_params = {
-            'keys': record.keys,
-        }
-        query_body = self._apply_template(template_params)
-        logger.info(query_body)
-        es_kwargs = dict(
-            index=index_name(),
-            body=query_body,
-            size=BATCH_SIZE,
-            scroll='1m',
-            _source_include=['rid'],
-            request_timeout = config.request_timeout,
-        )
         es = get_query_client()
-        result = es.search(**es_kwargs)
+        search = Search(using=es, index=index_name())
+        search = search.params(request_timeout=config.request_timeout,
+                               size=BATCH_SIZE,
+                               preserve_order=True,
+                               )
+        search = search.source(include='rid')
+        query_string = record.keys[0].decode('utf8')
+        search = search.query('query_string',
+                              query=query_string,
+                              fields=SEARCH_FIELDS
+                              )
+        # setup highlighting
+        for field in SEARCH_FIELDS:
+            name = field.split('^')[0]
+            if name == 'title':
+                # title shows up in results anyway
+                continue
+            search = search.highlight(name, fragment_size=FRAGMENT_SIZE)
+
+        try:
+            result = search.scan()
+        except TransportError:
+            # No es client, return empty results
+            logger.exception('ElasticSearch client not available.')
+            return IIBTree(), (self.id,)
         # initial return value, other batches to be applied
 
-        def score(record):
-            return int(10000 * float(record['_score']))
-
         retval = IIBTree()
-        for r in result['hits']['hits']:
-            retval[r['_source']['rid']] = score(r)
+        highlights = OOBTree()
+        for r in result:
+            retval[r.rid] = int(10000 * float(r.meta.score))
+            # Index query returns only rids, so we need
+            # to save highlights for later use
+            highlight_list = []
+            if getattr(r.meta, 'highlight', None) is not None:
+                for key in dir(r.meta.highlight):
+                    highlight_list.extend(r.meta.highlight[key])
+            highlights[r.meta.id] = highlight_list
 
-        total = result['hits']['total']
-        if total > BATCH_SIZE:
-            sid = result['_scroll_id']
-            counter = BATCH_SIZE
-            while counter < total:
-                result = es.scroll(scroll_id=sid, scroll='1m')
-                for record in result['hits']['hits']:
-                    retval[record['_source']['rid']] = score(record)
-                counter += BATCH_SIZE
+        # store highlights
+        annotations = IAnnotations(self.REQUEST)
+        annotations[HIGHLIGHT_KEY] = highlights
+
         return retval, (self.id,)
 
     def numObjects(self):
         """Return the number of indexed objects."""
-        es_kwargs = dict(
-            index=index_name(),
-            body={'query': {'match_all': {}}},
-        )
         es = get_query_client()
+        search = Search(using=es, index=index_name())
         try:
-            return es.count(**es_kwargs)['count']
+            return len(list(search.scan()))
         except Exception:
             logger.exception('ElasticSearch "count" query failed')
             return 'Problem getting all documents count from ElasticSearch!'
@@ -249,45 +233,5 @@ class ElasticSearchProxyIndex(SimpleItem):
 
         # We can not implement this afaik
 
-    ###########################################################################
-    #  private helper methods
-    ###########################################################################
-
-    def _apply_template(self, template_data):
-        tpl = jinja_loader.from_string(self.query_template)
-        query_text = tpl.render(template_data)
-        return json.loads(query_text)
-
 
 InitializeClass(ElasticSearchProxyIndex)
-
-
-@adapter(ElasticSearchProxyIndex, ISetupEnviron)
-class IndexNodeAdapter(NodeAdapterBase):
-    """Node im- and exporter for Index.
-    """
-
-    @property
-    def node(self):
-        """Export the object as a DOM node.
-        """
-        node = self._getObjectNode('index')
-        child = self._doc.createElement('querytemplate')
-        text = self._doc.createTextNode(self.context.query_template)
-        child.appendChild(text)
-        node.appendChild(child)
-        return node
-
-    @node.setter
-    def node(self, node):
-        """Import the object from the DOM node.
-        """
-        child_nodes = [
-            x for x in node.childNodes
-            if x.nodeType == 1 and x.nodeName == 'querytemplate'
-        ]
-        if child_nodes:
-            text_node = child_nodes[0].childNodes[0]
-            self.context.query_template = text_node.data.encode('utf-8')
-        else:
-            self.context.query_template = '{}'  # noqa: P103

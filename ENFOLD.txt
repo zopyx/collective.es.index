@@ -1,3 +1,10 @@
+ES Python dependencies
+----------------------
+
+Current version of this package requires elasticsearch_dsl. It is
+necessary to run the buildout to get that dependency on existing
+installations.
+
 ES configuration on zope.conf
 -----------------------------
 
@@ -103,3 +110,22 @@ python prompt, like this:
 >>> from elasticsearch import Elasticsearch
 >>> es = Elasticsearch()
 >>> es.ingest.delete_pipeline('attachment_ingest_plone_plone') 
+
+Highlight support
+-----------------
+
+For every search result, a list of highlights from extracted text is
+saved as a dictionary in the current request annotations. The
+dictionary is keyed by object UID.
+
+To get the annotations from Python code:
+
+from collective.es.index.esproxyindex import HIGHLIGHT_KEY
+from zope.annotation.interfaces import IAnnotations
+annotations = IAnnotations(REQUEST)
+highlights = annotations[HIGHLIGHT_KEY]
+obj_highlights = highlights[OBJ_UID]
+highlight_text = '<br/>'.join(obj_highlights)
+
+Highlights are just lists of HTML text fragments with the query term
+enclosed in <em> tags.

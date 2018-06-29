@@ -4,12 +4,6 @@
     <meta http-equiv="content-type" content="text/html;charset=utf8" />
     <title tal:content="context/title_or_id"></title>
     <link rel="stylesheet" type="text/css" href="manage_page_style.css" />
-    <style>
-      #editdiv {
-        width: 800px;
-        height: 400px;
-      }
-    </style>
 </head>
 
 <p><a href="${python:context.absolute_url()}/manage_catalogIndexes">Abort and back</a></p>
@@ -41,21 +35,6 @@
 
   <tr>
     <td align="left" valign="top">
-      <div class="form-label">
-        ElasticSearch JSON-Query Template
-      </div>
-    </td>
-    <td align="left" valign="top">
-      <textarea id="editvalue"
-                name="extra.query_template:record"
-                rows="40"
-                cols="120">{}</textarea>
-      <div id="editdiv" />
-    </td>
-  </tr>
-
-  <tr>
-    <td align="left" valign="top">
     </td>
     <td align="left" valign="top">
     <div class="form-element">
@@ -66,20 +45,5 @@
   </tr>
 </table>
 </form>
-
-<script src="${context/portal_url}/++plone++static/components/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
-<script>
-    var editdiv = document.querySelector('#editdiv');
-    var editor = ace.edit(editdiv)
-
-    editor.session.setMode("ace/mode/json");
-    editor.setTheme("ace/theme/monokai");
-    var textarea = document.querySelector('#editvalue');
-    textarea.style.display = 'none';
-    editor.getSession().setValue(textarea.value);
-    editor.getSession().on('change', function(){
-      textarea.value = editor.getSession().getValue();
-    });
-</script>
 
 <h1 tal:replace="structure context/manage_page_footer">FOOTER</h1>
