@@ -163,7 +163,7 @@ class ElasticSearchProxyIndex(SimpleItem):
                                )
         search = search.source(include='rid')
         query_string = record.keys[0].decode('utf8')
-        search = search.query('query_string',
+        search = search.query('simple_query_string',
                               query=query_string,
                               fields=SEARCH_FIELDS
                               )

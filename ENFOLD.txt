@@ -2,8 +2,9 @@ ES Python dependencies
 ----------------------
 
 Current version of this package requires elasticsearch_dsl. It is
-necessary to run the buildout to get that dependency on existing
-installations.
+necessary to add the 'elasticsearch-dsl' egg to the buildout eggs.
+Alternatively, it can be added to the eggs in the celery part. 
+Run the buildout again to get that dependency on existing installations.
 
 ES configuration on zope.conf
 -----------------------------
