@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from collective.es.index.interfaces import IElasticSearchClient
 from plone import api
+from plone.api.exc import CannotGetPortalError
 from zope.component import queryUtility
 
 import logging
@@ -49,8 +50,13 @@ def remove_index():
 
 
 def index_name():
-    portal = api.portal.get()
-    return 'plone_{0}'.format(portal.getId()).lower()
+    try:
+        portal = api.portal.get()
+        name = 'plone_{0}'.format(portal.getId()).lower()
+    except CannotGetPortalError:
+        # portal is being unindexed
+        name = None
+    return name
 
 
 class _QueryBlocker(object):

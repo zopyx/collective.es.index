@@ -327,10 +327,14 @@ class ElasticSearchIndexQueueProcessor(object):
         self.index(obj, attributes)
 
     def unindex(self, obj):
+        index = index_name()
+        if index is None:
+            # portal no longer there
+            return
         uid = api.content.get_uuid(obj)
         if es_config.use_celery:
             unindex_content.delay(
-                index=index_name(),
+                index=index,
                 doc_type='content',
                 uid=uid,
                 timeout=es_config.request_timeout,
@@ -344,7 +348,7 @@ class ElasticSearchIndexQueueProcessor(object):
                 return
             try:
                 es.delete(
-                    index=index_name(),
+                    index=index,
                     doc_type='content',
                     id=uid,
                     request_timeout=es_config.request_timeout,
