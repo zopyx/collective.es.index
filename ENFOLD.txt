@@ -43,62 +43,66 @@ whenever a change is made to these parameters.
 Celery configuration
 --------------------
 
-NOTE: this configuration setup conflicts with collective.celery. We
-will not be using that package going forward. Please be sure to remove it
-from the buildout eggs.
+NOTE: The configuration now uses collective.celery, so it has changed.
 
-The easiest way to get celery correctly configured is to use the
-collective.recipe.celery buildout recipe. This requires adding the
-following parts to the buildout (note that since redis is already part
-of our setup, we use it as broker for celery too):
+The collective.celery package requires adding the celery and
+collective.celery eggs to the mian buildout section eggs. Example:
+
+eggs = 
+    celery
+    Plone
+    elasticsearch
+    elasticsearch-dsl
+    collective.es.index
+    collective.celery
+
+We still use the celery-broker part, for clarity. The celery part is
+still required, but is simpler:
 
 [celery-broker]
 host = 127.0.0.1
 port = 6379
 
 [celery]
-recipe = collective.recipe.celery
-broker-transport = redis
-broker-host = ${celery-broker:host}
-broker-port = ${celery-broker:port}
-result-backend = redis
-result-dburi = redis://${celery-broker:host}:${celery-broker:port}
-eggs =
-    flower
-    redis
+recipe = zc.recipe.egg
+environment-vars = ${buildout:environment-vars}
+eggs = 
     ${buildout:eggs}
-imports =
-# Celery task imports here
-    collective.es.index.tasks
-additional-config =
-    import os
-    os.environ['CELERY_BROKER'] = '${celery:result-dburi}'
-    os.environ['ZOPE_CONFIG'] = 'parts/client1/etc/zope.conf'
-    BROKER_URL = '${celery:result-dburi}'
-    CELERY_IGNORE_RESULT = True
-    CELERY_STORE_ERRORS_EVEN_IF_IGNORED = True
-    CELERY_SEND_TASK_ERROR_EMAILS = True
-    ADMINS = (
-        ('Carlos de la Guardia', 'carlos.delaguardia@gmail.com'),
-    )
+    flower
+scripts = pcelery flower
 
-Make sure to change the ADMINS configuration parameter above. Only the
-celery part needs to be listed under the buildout parts.
+The celery part depends on having some variables added to the main
+environment-vars section:
 
-This recipe generates a celeryconfig.py file under parts/celery. This
-file can be used in a non-buildout setup (it needs to be in the celery
-sys.path).
+environment-vars =
+    CELERY_BROKER_URL redis://${celery-broker:host}:${celery-broker:port}
+    CELERY_RESULT_BACKEND redis://${celery-broker:host}:${celery-broker:port}
+    CELERY_TASKS collective.es.index.tasks
+
+Additional Zope configuration
+-----------------------------
+
+There's now a hook in collective.celery for carrying out additional zope
+configuration before running the tasks. If the tasks module contains an
+'extra_config' method, it is passed the zope startup object at worker
+initialization time. This is used by collective.es.index to run the
+elasticsearch configuration method.
 
 Monitoring celery tasks
 -----------------------
 
 Celery needs to be started as an independent process. It's recommended to
 use supervisord for this. To try it out from the command line, you can run
-"bin/celery worker -B" from the buildout directory.
+"bin/pcelery worker" from the buildout directory. Note that the script is
+now named 'pcelery' and it needs a path to the zope configuration. Example:
+
+$ bin/pcelery worker parts/client1/etc/zope.conf
 
 Flower is included in this setup. Run "bin/flower" from the buildout
 directory and consult the dashboard at http://localhost:5555 using a
-browser.
+browser. Note that the broker is now a requried parameter:
+
+$ bin/flower --broker redis://127.0.0.1:6379
 
 Removing b64 attribute
 ----------------------
@@ -130,3 +134,29 @@ highlight_text = '<br/>'.join(obj_highlights)
 
 Highlights are just lists of HTML text fragments with the query term
 enclosed in <em> tags.
+
+Collective.fingerpointing
+-------------------------
+
+To use the new extras functionality for collective.fingerpointing,
+simply add an extras.py module somewhere in your code, with a handler
+for each type of subscriber (lifecycle, workflow, pas, registry,
+generic_setup, iterate). All handlers receive the same parameters. The
+handler must return a dictionary with string keys and values. Example:
+
+def lifecycle(event, action, extra_info):
+    obj = event.object
+    return {'path': obj.absolute_url_path(),
+            'type': obj.portal_type,
+            'uid': obj.UID()}
+
+To configure the extras handlers, add their module name to the
+collective-fingerpointing configuration:
+
+zope-conf-additional +=
+    <product-config collective.fingerpointing>
+        audit-log ${buildout:directory}/var/log/audit.log
+        audit-log-max-size 10240
+        audit-log-old-files 30
+        audit-log-extras-handlers my.package.extras
+    </product-config>
