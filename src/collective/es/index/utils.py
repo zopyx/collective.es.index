@@ -4,11 +4,8 @@ from plone import api
 from plone.api.exc import CannotGetPortalError
 from zope.component import queryUtility
 
-import logging
 import threading
 
-
-logger = logging.getLogger(__name__)
 
 INDEX = 'plone'
 

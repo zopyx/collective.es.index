@@ -1,11 +1,10 @@
+from celery.utils.log import get_task_logger
 from collective.celery import task
 from collective.es.index.utils import get_ingest_client
 from elasticsearch.exceptions import NotFoundError
 
-import logging
 
-
-logger = logging.getLogger('collective.es.index')
+logger = get_task_logger(__name__)
 
 
 def extra_config(startup):

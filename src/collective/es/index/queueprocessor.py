@@ -31,7 +31,7 @@ import uuid
 
 es_config = get_configuration()
 
-logger = logging.getLogger('collective.es.index')
+logger = logging.getLogger(__name__)
 
 ES_PORTAL_UUID_KEY = 'collective.es.index.portal_uuid'
 CACHE_ATTRIBUTE = '_collective_elasticsearch_mapping_cache_'
