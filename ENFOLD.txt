@@ -135,28 +135,47 @@ highlight_text = '<br/>'.join(obj_highlights)
 Highlights are just lists of HTML text fragments with the query term
 enclosed in <em> tags.
 
-Collective.fingerpointing
--------------------------
+Collective.auditlog
+-------------------
 
-To use the new extras functionality for collective.fingerpointing,
-simply add an extras.py module somewhere in your code, with a handler
-for each type of subscriber (lifecycle, workflow, pas, registry,
-generic_setup, iterate). All handlers receive the same parameters. The
-handler must return a dictionary with string keys and values. Example:
+Collective.fingerpointing has been replaced by collective.auditlog. Make
+sure to change the eggs in the buildout to reflect this.
 
-def lifecycle(event, action, extra_info):
-    obj = event.object
-    return {'path': obj.absolute_url_path(),
-            'type': obj.portal_type,
-            'uid': obj.UID()}
+For now, collective.auditlog uses SQLAlchemy for storing data. To use
+postgres, it's necessary to add the 'pyscopg2' egg to the buildout. Once
+the product is installed, add the correct connection URL to the product
+setup. Example:
 
-To configure the extras handlers, add their module name to the
-collective-fingerpointing configuration:
+postgresql://cguardia:cguardia@localhost/auditlog
 
-zope-conf-additional +=
-    <product-config collective.fingerpointing>
-        audit-log ${buildout:directory}/var/log/audit.log
-        audit-log-max-size 10240
-        audit-log-old-files 30
-        audit-log-extras-handlers my.package.extras
+By default, collective.auditlog uses content rules to define which events
+to capture. An additional mechanism has been added that allows the site to
+automatically log the various events supported by collective.auditlog.
+Simply choose from the picklist in the config for this to work. If no
+events are selected, no logging will occur.
+
+It is possible to log custom events from application code by using the
+AuditableActionPerformedEvent, like this:
+
+from zope event import notify
+from collective.auditlog.interfaces import AuditableActionPerformedEvent
+notify(AuditableActionPerformedEvent(obj, request, "action", "note"))
+
+'obj', refers to the affected content object; 'request' is the current zope
+request, 'action' and 'note' correspond to the logged action and its
+description, respectively. All parameters are required, but everything
+except obj can be set to None if no value is available. 
+
+In addition to control panel configuration, connection parameters can be
+set using the zope-conf-additional directive in the buildout. Note that
+this will take precedence over any control panel configuration. Example:
+
+zope-conf-additional =
+    <product-config collective.auditlog>
+        audit-connection-string postgres://cguardia:cguardia@localhost/auditlog
+        audit-connection-params {"pool_recycle": 3600, "echo": true}
     </product-config>
+
+There is now a view for the audit log entries, located at @@auditlog-view.
+There is no link to it from the control panel at the moment. The view uses
+infinite scrollong rather than pagination for looking at the logs.
