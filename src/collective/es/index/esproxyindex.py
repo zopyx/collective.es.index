@@ -163,6 +163,9 @@ class ElasticSearchProxyIndex(SimpleItem):
                                )
         search = search.source(include='rid')
         query_string = record.keys[0].decode('utf8')
+        if query_string and query_string.startswith('*'):
+            # plone.app.querystring contains op sends a leading *, remove it
+            query_string = query_string[1:]
         search = search.query('simple_query_string',
                               query=query_string,
                               fields=SEARCH_FIELDS

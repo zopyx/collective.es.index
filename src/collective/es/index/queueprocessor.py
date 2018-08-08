@@ -30,6 +30,7 @@ import uuid
 
 
 es_config = get_configuration()
+indexed_chars = getattr(es_config, 'indexed_chars', None)
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ INGEST_PIPELINES = {
             'attachment': {
                 'field': 'text',
                 'target_field': 'extracted_text',
-                'indexed_chars': es_config.indexed_chars,
+                'indexed_chars': indexed_chars,
                 'ignore_missing': True,
             },
         },
@@ -59,7 +60,7 @@ INGEST_PIPELINES = {
             'attachment': {
                 'field': 'file',
                 'target_field': 'extracted_file',
-                'indexed_chars': es_config.indexed_chars,
+                'indexed_chars': indexed_chars,
                 'ignore_missing': True,
             },
         },
@@ -67,7 +68,7 @@ INGEST_PIPELINES = {
             'attachment': {
                 'field': 'image',
                 'target_field': 'extracted_image',
-                'indexed_chars': es_config.indexed_chars,
+                'indexed_chars': indexed_chars,
                 'ignore_missing': True,
             },
         },
