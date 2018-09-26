@@ -150,6 +150,7 @@ class ElasticSearchProxyIndex(SimpleItem):
         all data fields used.
         """
         config = get_configuration()
+        timeout = getattr(config, 'request_timeout', 20)
         if query_blocker.blocked:
             return
         record = parseIndexRequest(request, self.id)
@@ -157,7 +158,7 @@ class ElasticSearchProxyIndex(SimpleItem):
             return None
         es = get_query_client()
         search = Search(using=es, index=index_name())
-        search = search.params(request_timeout=config.request_timeout,
+        search = search.params(request_timeout=timeout,
                                size=BATCH_SIZE,
                                preserve_order=True,
                                )
@@ -199,8 +200,12 @@ class ElasticSearchProxyIndex(SimpleItem):
             highlights[r.meta.id] = highlight_list
 
         # store highlights
-        annotations = IAnnotations(self.REQUEST)
-        annotations[HIGHLIGHT_KEY] = highlights
+        try:
+            annotations = IAnnotations(self.REQUEST)
+            annotations[HIGHLIGHT_KEY] = highlights
+        except TypeError:
+            # maybe we are in a test
+            pass
 
         return retval, (self.id,)
 

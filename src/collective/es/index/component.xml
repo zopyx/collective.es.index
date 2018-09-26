@@ -61,6 +61,11 @@
       Use celery for async indexing.
       </description>
     </key>
+    <key name="facets" datatype="string" default="">
+      <description>
+      Facets for faceted search page.
+      </description>
+    </key>
   </sectiontype>
 
 </component>

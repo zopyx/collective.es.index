@@ -166,6 +166,49 @@ highlight_text = '<br/>'.join(obj_highlights)
 Highlights are just lists of HTML text fragments with the query term
 enclosed in <em> tags.
 
+Faceted search
+--------------
+
+In addition to the elastic search index, this package includes support for
+faceted search, as implemented in the elasticsearch_dsl library. There is a
+`@@faceted-search` view, which will allow you to filter search results
+using facets.
+
+Note that collective.es.index used a mapping that was incompatible with
+faceted search, wo it's necessary to completely remove the previous index
+from elastic search and reindex it again.
+
+The quickest way to remove the index is from the command line:
+
+>>> from elasticsearch import Elasticsearch
+>>> es = Elasticsearch()
+>>> es.indices.delete('plone_plone')
+
+Once this is done, the full catalog must be reindexed from the ZMI.
+
+By default, review_state, subjects, and modified fields are used as facets.
+The elastic search zope configuration supports changing them and adding custom
+facets. For regular keyword fields, just use the name of the field. For
+date fields, add an interval (month, week, day, hour). For integer fields,
+an integer interval is allowed:
+
+zope-conf-additional =
+    %import collective.es.index
+    <elasticsearch>
+    query 127.0.0.1:92000
+    facets department created,month subjects
+    </elasticsearch>
+
+The facets key expects one or more facets separated by spaces. In this
+example there is a custom facet (department), a date facet using monthly
+intervals, and a regular plone facet. Do not leave any spaces between the
+field and the interval for date and integer facets, or they will not be
+interpreted correctly.
+
+Although elasticsearch_dsl supports month, week, day, and hour intervals, in
+practice, month is the best for plone, since the others result in a large
+number of options.
+
 Source Code
 -----------
 

@@ -27,6 +27,7 @@ class ElasticSearchIngressConfFactory(object):
         self.max_blobsize = self.section.max_blobsize
         self.use_celery = self.section.use_celery
         self.indexed_chars = self.section.indexed_chars
+        self.facets = self.section.facets
 
     def create(self):
         base_client = Elasticsearch(

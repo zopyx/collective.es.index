@@ -40,10 +40,10 @@ def get_configuration():
         return es.zope_configuration
 
 
-def remove_index():
+def remove_index(index=INDEX):
     es = get_ingest_client()
-    if es.indices.exists(index=INDEX):
-        es.indices.delete(index=INDEX)
+    if es.indices.exists(index=index):
+        es.indices.delete(index=index)
 
 
 def index_name():

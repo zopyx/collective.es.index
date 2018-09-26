@@ -2,6 +2,7 @@
 from Acquisition import aq_base
 from Acquisition import aq_parent
 from collective.es.index.interfaces import IElasticSearchIndexQueueProcessor
+from collective.es.index.mappings import INITIAL_MAPPING
 from collective.es.index.utils import get_configuration
 from collective.es.index.utils import get_ingest_client
 from collective.es.index.utils import index_name
@@ -23,8 +24,6 @@ from zope.globalrequest import getRequest
 from zope.interface import implementer
 
 import base64
-import collections
-import datetime
 import logging
 import uuid
 
@@ -90,15 +89,6 @@ INGEST_PIPELINES = {
     ],
 }
 
-MAPPING_TYPE_MAP = collections.OrderedDict([
-    (bool, {'type': 'boolean'}),  # bool first, its also an int
-    (int, {'type': 'long'}),
-    (float, {'type': 'double'}),
-    (datetime.datetime, {'type': 'date'}),
-    (basestring, {'type': 'text'}),
-    (dict, {'type': 'object'}),
-])
-
 
 @implementer(IElasticSearchIndexQueueProcessor)
 class ElasticSearchIndexQueueProcessor(object):
@@ -110,6 +100,7 @@ class ElasticSearchIndexQueueProcessor(object):
 
     def _create_index(seld, es):
         es.indices.create(index=index_name())
+        self._setup_mapping(es)
 
     @ram.cache(lambda *args: index_name())
     def _check_for_ingest_pipeline(self, es):
@@ -139,44 +130,11 @@ class ElasticSearchIndexQueueProcessor(object):
         setattr(request, CACHE_ATTRIBUTE, mapping)
         return mapping
 
-    def _auto_mapping(self, es, obj, data):
-        mappings = self._get_mapping(es)
-        old_map = mappings[index_name()]['mappings']
-        old_map = old_map.get('content', {}).get('properties', {})
-        new_map = {}
-        for key in data:
-            if key in old_map:
-                continue
-            # figure out field type
-            value = data[key]
-            for pytype in MAPPING_TYPE_MAP:
-                if isinstance(value, pytype):
-                    new_map[key] = MAPPING_TYPE_MAP[pytype]
-                    break
-        for record in INGEST_PIPELINES['processors']:
-            if 'attachment' not in record:
-                continue
-            name = record['attachment']['target_field']
-            if name not in old_map:
-                new_map[name] = {
-                    'properties': {
-                        'content': MAPPING_TYPE_MAP[basestring],
-                        'content_length': MAPPING_TYPE_MAP[int],
-                        'content_type': MAPPING_TYPE_MAP[basestring],
-                        'language': MAPPING_TYPE_MAP[basestring],
-                    },
-                }
-        if not new_map:
-            return
-        new_map = {
-            'content': {
-                'properties': new_map,
-            },
-        }
+    def _setup_mapping(self, es):
         es.indices.put_mapping(
             doc_type='content',
             index=index_name(),
-            body=new_map,
+            body=INITIAL_MAPPING,
         )
         request = getRequest()
         setattr(request, CACHE_ATTRIBUTE, None)
@@ -256,6 +214,7 @@ class ElasticSearchIndexQueueProcessor(object):
             logger.warning(
                 'No ElasticSearch client available.',
             )
+            query_blocker.unblock()
             return
         try:
             self._check_for_ingest_pipeline(es)
@@ -266,6 +225,7 @@ class ElasticSearchIndexQueueProcessor(object):
                     obj.absolute_url(),
                 ),
             )
+            query_blocker.unblock()
             return
         try:
             serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
@@ -275,6 +235,7 @@ class ElasticSearchIndexQueueProcessor(object):
                     obj.absolute_url(),
                 ),
             )
+            query_blocker.unblock()
             return
         try:
             data = serializer()
@@ -284,11 +245,11 @@ class ElasticSearchIndexQueueProcessor(object):
                     obj.absolute_url(),
                 ),
             )
+            query_blocker.unblock()
             return
         self._reduce_data(data)
         self._expand_rid(obj, data)
         self._expand_binary_data(obj, data)
-        self._auto_mapping(es, obj, data)
         uid = api.content.get_uuid(obj)
         es_kwargs = dict(
             index=index_name(),

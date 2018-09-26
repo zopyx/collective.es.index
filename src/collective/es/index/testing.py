@@ -6,7 +6,15 @@ from plone.app.testing import IntegrationTesting
 from plone.app.testing import PloneSandboxLayer
 from plone.testing import z2
 
-import collective.es.index
+class ProductConfiguration(object):
+    max_blobsize = 0
+    request_timeout = 20
+    use_celery = False
+configuration = ProductConfiguration()
+
+import collective.es.index.utils
+collective.es.index.utils.index_name = lambda: 'testing_plone'
+collective.es.index.utils.get_configuration = lambda: configuration
 
 
 class CollectiveEsIndexLayer(PloneSandboxLayer):
@@ -17,6 +25,9 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
         # Load any other ZCML that is required for your tests.
         # The z3c.autoinclude feature is disabled in the Plone fixture base
         # layer.
+        import plone.restapi
+        import collective.es.index
+        self.loadZCML(package=plone.restapi)
         self.loadZCML(package=collective.es.index)
         z2.installProduct(app, 'collective.es.index')
 
@@ -30,9 +41,14 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
             [{'host': '127.0.0.1', 'port': '9200'}],
             use_ssl=False,
         )
+        ingest = Elasticsearch(
+            [{'host': '127.0.0.1', 'port': '9200'}],
+            use_ssl=False,
+        )
+        es.zope_configuration = configuration
+        es.ingest = ingest
         directlyProvides(es, IElasticSearchClient)
         provideUtility(es)
-
 
 COLLECTIVE_ES_INDEX_FIXTURE = CollectiveEsIndexLayer()
 
