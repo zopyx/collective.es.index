@@ -39,8 +39,10 @@ DATE_FORMATS = {
 
 
 def get_configured_facets():
+    facets = None
     configuration = get_configuration()
-    facets = configuration.facets.split()
+    if configuration:
+        facets = configuration.facets.split()
     if facets:
         configured_facets = {}
         for facet in facets:
