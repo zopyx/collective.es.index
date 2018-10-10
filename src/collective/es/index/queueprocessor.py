@@ -98,7 +98,7 @@ class ElasticSearchIndexQueueProcessor(object):
     def _es_pipeline_name(self):
         return 'attachment_ingest_{0}'.format(index_name())
 
-    def _create_index(seld, es):
+    def _create_index(self, es):
         es.indices.create(index=index_name())
         self._setup_mapping(es)
 
