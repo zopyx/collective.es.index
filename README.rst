@@ -57,8 +57,8 @@ To index existing content, a full ``Clear and Rebuild`` is needed (via ZMI/``por
 ES Python dependencies
 ----------------------
 
-Current version of this package requires elasticsearch_dsl. It is
-necessary to add the 'elasticsearch-dsl' egg to the buildout eggs.
+Current version of this package requires `elasticsearch_dsl`.
+It is necessary to add the 'elasticsearch-dsl' egg to the buildout eggs.
 Alternatively, it can be added to the eggs in the celery part.
 Run the buildout again to get that dependency on existing installations.
 
@@ -67,31 +67,36 @@ ES configuration on zope.conf
 
 The elasticsearch directive now supports the following keys:
 
-- max_blobsize. Max length of files to index, in bytes. If a file is
-  larger than this size, it will not be indexed, and this will be logged.
+`max_blobsize`
+  Max length of files to index, in bytes.
+  If a file is larger than this size, it will not be indexed, and this will be logged.
   Default is zero, which means index everything.
 
-- request_timeout. The default connection timeout is 10 seconds. Using this
-  key it can be set to any number of seconds.
+`request_timeout`
+  The default connection timeout is 10 seconds.
+  Using this key it can be set to any number of seconds.
 
-- use_celery. If true, indexing will be done in async celery tasks. This
-  requires that celery is correctly configured.
+`use_celery`
+  If `true`, indexing will be done in async celery tasks.
+  This requires that celery is correctly configured.
 
-- indexed_chars. Maximum number of characters to extract from attachments.
-  Default is 100,000. Use -1 for infinite.
+`indexed_chars`
+  Maximum number of characters to extract from attachments.
+  Default is `100000`.
+  Use `-1` for infinite.
 
-Example:
+Example::
 
-zope-conf-additional =
-    %import collective.es.index
-    <elasticsearch>
-    query 127.0.0.1:92000
-    ingest 127.0.0.1:92000
-    request_timeout 20
-    max_blobsize 10000000 # 10 MB
-    indexed_chars 200000
-    use_celery true
-    </elasticsearch>
+  zope-conf-additional =
+      %import collective.es.index
+      <elasticsearch>
+      query 127.0.0.1:92000
+      ingest 127.0.0.1:92000
+      request_timeout 20
+      max_blobsize 10000000 # 10 MB
+      indexed_chars 200000
+      use_celery true
+      </elasticsearch>
 
 It is necessary to add this configuration to the buildout and rerun it
 whenever a change is made to these parameters.
@@ -101,51 +106,51 @@ Celery configuration
 
 NOTE: The configuration now uses collective.celery, so it has changed.
 
-The collective.celery package requires adding the celery and
-collective.celery eggs to the mian buildout section eggs. Example:
+The collective.celery package requires adding the celery and collective.celery eggs to the mian buildout section eggs.
+Example::
 
-eggs =
-    celery
-    Plone
-    elasticsearch
-    elasticsearch-dsl
-    collective.es.index
-    collective.celery
+  eggs =
+      celery
+      Plone
+      elasticsearch
+      elasticsearch-dsl
+      collective.es.index
+      collective.celery
 
-We still use the celery-broker part, for clarity. The celery part is
-still required, but is simpler:
+We still use the celery-broker part, for clarity.
+The celery part is still required, but is simpler::
 
-[celery-broker]
-host = 127.0.0.1
-port = 6379
+  [celery-broker]
+  host = 127.0.0.1
+  port = 6379
 
-[celery]
-recipe = zc.recipe.egg
-environment-vars = ${buildout:environment-vars}
-eggs =
-    ${buildout:eggs}
-    flower
-scripts = pcelery flower
+  [celery]
+  recipe = zc.recipe.egg
+  environment-vars = ${buildout:environment-vars}
+  eggs =
+      ${buildout:eggs}
+      flower
+  scripts = pcelery flower
 
 The celery part depends on having some variables added to the main
-environment-vars section:
+environment-vars section::
 
-environment-vars =
-    CELERY_BROKER_URL redis://${celery-broker:host}:${celery-broker:port}
-    CELERY_RESULT_BACKEND redis://${celery-broker:host}:${celery-broker:port}
-    CELERY_TASKS collective.es.index.tasks
+  environment-vars =
+      CELERY_BROKER_URL redis://${celery-broker:host}:${celery-broker:port}
+      CELERY_RESULT_BACKEND redis://${celery-broker:host}:${celery-broker:port}
+      CELERY_TASKS collective.es.index.tasks
 
 Removing b64 attribute
 ----------------------
 
-To get the b64 attribute removal working on an existing elasticsearch
-install, it's necessary to clear the old ingest pipeline, so that
-collective.es.index can install the new one. To do this, you can use a
-python prompt, like this:
+To get the b64 attribute removal working on an existing elasticsearch install,
+it's necessary to clear the old ingest pipeline,
+so that collective.es.index can install the new one.
+To do this, you can use a Python prompt, like this::
 
->>> from elasticsearch import Elasticsearch
->>> es = Elasticsearch()
->>> es.ingest.delete_pipeline('attachment_ingest_plone_plone')
+  >>> from elasticsearch import Elasticsearch
+  >>> es = Elasticsearch()
+  >>> es.ingest.delete_pipeline('attachment_ingest_plone_plone')
 
 Highlight support
 -----------------
@@ -154,60 +159,59 @@ For every search result, a list of highlights from extracted text is
 saved as a dictionary in the current request annotations. The
 dictionary is keyed by object UID.
 
-To get the annotations from Python code:
+To get the annotations from Python code::
 
-from collective.es.index.esproxyindex import HIGHLIGHT_KEY
-from zope.annotation.interfaces import IAnnotations
-annotations = IAnnotations(REQUEST)
-highlights = annotations[HIGHLIGHT_KEY]
-obj_highlights = highlights[OBJ_UID]
-highlight_text = '<br/>'.join(obj_highlights)
+  from collective.es.index.esproxyindex import HIGHLIGHT_KEY
+  from zope.annotation.interfaces import IAnnotations
+  annotations = IAnnotations(REQUEST)
+  highlights = annotations[HIGHLIGHT_KEY]
+  obj_highlights = highlights[OBJ_UID]
+  highlight_text = '<br/>'.join(obj_highlights)
 
 Highlights are just lists of HTML text fragments with the query term
-enclosed in <em> tags.
+enclosed in `<em>` tags.
 
 Faceted search
 --------------
 
-In addition to the elastic search index, this package includes support for
-faceted search, as implemented in the elasticsearch_dsl library. There is a
-`@@faceted-search` view, which will allow you to filter search results
-using facets.
+In addition to the elastic search index,
+this package includes support for faceted search,
+as implemented in the elasticsearch_dsl library.
+There is a `@@faceted-search` view, which will allow you to filter search results using facets.
 
-Note that collective.es.index used a mapping that was incompatible with
-faceted search, wo it's necessary to completely remove the previous index
-from elastic search and reindex it again.
+Note that collective.es.index used a mapping that was incompatible with faceted search,
+wo it's necessary to completely remove the previous index from elastic search and reindex it again.
 
-The quickest way to remove the index is from the command line:
+The quickest way to remove the index is from the command line::
 
->>> from elasticsearch import Elasticsearch
->>> es = Elasticsearch()
->>> es.indices.delete('plone_plone')
+  >>> from elasticsearch import Elasticsearch
+  >>> es = Elasticsearch()
+  >>> es.indices.delete('plone_plone')
 
 Once this is done, the full catalog must be reindexed from the ZMI.
 
 By default, review_state, subjects, and modified fields are used as facets.
-The elastic search zope configuration supports changing them and adding custom
-facets. For regular keyword fields, just use the name of the field. For
-date fields, add an interval (month, week, day, hour). For integer fields,
-an integer interval is allowed:
+The elastic search zope configuration supports changing them and adding custom facets.
+For regular keyword fields, just use the name of the field.
+For date fields, add an interval (month, week, day, hour).
+For integer fields, an integer interval is allowed::
 
-zope-conf-additional =
-    %import collective.es.index
-    <elasticsearch>
-    query 127.0.0.1:92000
-    facets department created,month subjects
-    </elasticsearch>
+  zope-conf-additional =
+      %import collective.es.index
+      <elasticsearch>
+      query 127.0.0.1:92000
+      facets department created,month subjects
+      </elasticsearch>
 
-The facets key expects one or more facets separated by spaces. In this
-example there is a custom facet (department), a date facet using monthly
-intervals, and a regular plone facet. Do not leave any spaces between the
-field and the interval for date and integer facets, or they will not be
-interpreted correctly.
+The facets key expects one or more facets separated by spaces.
+In this example there is a custom facet (department),
+a date facet using monthly intervals,
+and a regular plone facet.
+Do not leave any spaces between the field and the interval for date and integer facets,
+or they will not be interpreted correctly.
 
-Although elasticsearch_dsl supports month, week, day, and hour intervals, in
-practice, month is the best for plone, since the others result in a large
-number of options.
+Although elasticsearch_dsl supports month, week, day, and hour intervals,
+in practice, month is the best for plone, since the others result in a large number of options.
 
 Source Code
 -----------
@@ -228,7 +232,7 @@ Initial implementation was made possible by `Evangelisch-reformierte Landeskirch
 
 Idea and testing: Peter Holzer
 
-Concept & code by Jens W. Klein
+Concept & initial code by Jens W. Klein
 
 Authors:
 
