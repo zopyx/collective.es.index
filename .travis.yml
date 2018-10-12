@@ -14,10 +14,11 @@ services:
 install:
   - virtualenv .
   - bin/pip install -r requirements.txt
+  - bin/pip install selenium==2.53.6
   - bin/buildout -N buildout:download-cache=downloads code-analysis:return-status-codes=True annotate
   - bin/buildout -N buildout:download-cache=downloads code-analysis:return-status-codes=True
 script:
-  - bin/code-analysis
+#  - bin/code-analysis
   - bin/test
 after_success:
   - bin/createcoverage

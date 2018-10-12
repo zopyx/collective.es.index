@@ -65,7 +65,7 @@ Run the buildout again to get that dependency on existing installations.
 ES configuration on zope.conf
 -----------------------------
 
-The elasticsearch directive now supports the following keys:
+The elasticsearch directive supports the following keys:
 
 `max_blobsize`
   Max length of files to index, in bytes.
