@@ -12,11 +12,4 @@ setup(
     # https://github.com/pypa/setuptools/issues/1136
     # we need one line in here:
     package_dir={'': 'src'},
-    install_requires=[
-        'redis',
-        'celery',
-        'elasticsearch-dsl',
-        'plone.restapi',
-        'jinja2',
-    ],
 )
