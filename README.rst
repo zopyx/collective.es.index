@@ -104,7 +104,7 @@ whenever a change is made to these parameters.
 Celery configuration
 --------------------
 
-NOTE: The configuration now uses collective.celery, so it has changed.
+NOTE: The configuration here uses `collective.celery`, so it has changed.
 
 The collective.celery package requires adding the celery and collective.celery eggs to the mian buildout section eggs.
 Example::
