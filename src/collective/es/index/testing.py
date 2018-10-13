@@ -45,7 +45,7 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
             [{'host': '127.0.0.1', 'port': '9200'}],
             use_ssl=False,
         )
-        es.indices.create('espi')
+        es.indices.create('testing_plone')
         es.zope_configuration = configuration
         es.ingest = ingest
         directlyProvides(es, IElasticSearchClient)
@@ -54,7 +54,7 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
     def tearDownPloneSite(self, portal):
         from collective.es.index.utils import get_query_client
         es = get_query_client()
-        es.indices.delete('espi')
+        es.indices.delete('testing_plone')
 
 COLLECTIVE_ES_INDEX_FIXTURE = CollectiveEsIndexLayer()
 
