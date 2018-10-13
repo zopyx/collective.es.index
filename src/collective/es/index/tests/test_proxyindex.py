@@ -47,6 +47,9 @@ class TestESProxyIndexAllQuery(unittest.TestCase):
         """Custom shared utility setup for following tests."""
         self.catalog = self.layer['portal']['portal_catalog']
         from collective.es.index.esproxyindex import ElasticSearchProxyIndex
+        from collective.es.index.utils import get_query_client
+        client = get_query_client()
+        client.indices.create('testing_plone')
         espi = ElasticSearchProxyIndex(
             'espi',
             caller=self.catalog,
@@ -82,6 +85,9 @@ class TestESProxyIndexFulltext(unittest.TestCase):
         # install index
         from collective.es.index.esproxyindex import ElasticSearchProxyIndex
         from plone.app.textfield.value import RichTextValue
+        from collective.es.index.utils import get_query_client
+        client = get_query_client()
+        client.indices.create('testing_plone')
         espi = ElasticSearchProxyIndex(
             'espi',
             caller=self.catalog,
