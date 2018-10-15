@@ -110,12 +110,8 @@ The collective.celery package requires adding the celery and collective.celery e
 Example::
 
   eggs =
-      celery
       Plone
-      elasticsearch
-      elasticsearch-dsl
       collective.es.index
-      collective.celery
 
 We still use the celery-broker part, for clarity.
 The celery part is still required, but is simpler::
