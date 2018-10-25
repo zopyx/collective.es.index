@@ -7,33 +7,16 @@ cache:
   - downloads
 python:
   - 2.7
-
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer
 matrix:
   fast_finish: true
-
-#services:
-#  - elasticsearch
-
-before_install:
-  - sudo update-java-alternatives -s java-8-oracle
-  - export JAVA_HOME=/usr/lib/jvm/java-8-oracle/jre
-  - java -version
-
+services:
+  - elasticsearch
 install:
-  - curl -L -o /tmp/es-snap.zip https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.2.4.zip
-  - unzip /tmp/es-snap.zip -d /tmp/
-  - /tmp/elasticsearch-*/bin/elasticsearch -E path.repo=/tmp -E repositories.url.allowed_urls='http://*' -E node.attr.testattr=test -d
-  - /tmp/elasticsearch-*/bin/elasticsearch-plugin install -b ingest-attachment
   - virtualenv .
   - bin/pip install -r requirements.txt
   - bin/pip install selenium==2.53.6
   - bin/buildout -N buildout:download-cache=downloads code-analysis:return-status-codes=True annotate
   - bin/buildout -N buildout:download-cache=downloads code-analysis:return-status-codes=True
-
 script:
 #  - bin/code-analysis
   - bin/test

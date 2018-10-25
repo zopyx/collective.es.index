@@ -62,7 +62,7 @@ class TestESProxyIndexAllQuery(unittest.TestCase):
         portal.invokeFactory('Document', 'd2', title='Test two')
         portal.invokeFactory('Document', 'd3', title='Test three')
         # give es time to index documents
-        time.sleep(5)
+        time.sleep(2)
 
     def tearDown(self):
         from collective.es.index.utils import remove_index
@@ -109,7 +109,7 @@ class TestESProxyIndexFulltext(unittest.TestCase):
                                        'text/plain',
                                        'text/html')
         # give es time to index documents
-        time.sleep(5)
+        time.sleep(2)
 
     def tearDown(self):
         from collective.es.index.utils import remove_index

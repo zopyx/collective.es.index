@@ -56,6 +56,11 @@
       100,000. For unlimited characters, use -1.
       </description>
     </key>
+    <key name="search_fields" datatype="string" default="">
+      <description>
+      Search fields for index queries.
+      </description>
+    </key>
     <key name="use_celery" datatype="boolean" default="false">
       <description>
       Use celery for async indexing.

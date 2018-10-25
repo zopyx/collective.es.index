@@ -49,7 +49,7 @@ class CollectiveEsIndexLayer(PloneSandboxLayer):
         es.ingest = ingest
         directlyProvides(es, IElasticSearchClient)
         provideUtility(es)
-        
+
 
 COLLECTIVE_ES_INDEX_FIXTURE = CollectiveEsIndexLayer()
 

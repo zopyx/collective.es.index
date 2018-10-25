@@ -84,9 +84,17 @@ def get_configured_facets():
     return configured_facets
 
 
+def get_search_fields():
+    configuration = get_configuration()
+    search_fields = getattr(configuration, 'search_fields', None)
+    if not search_fields:
+        search_fields = SEARCH_FIELDS
+    return search_fields.split()
+
+
 class PloneSearch(FacetedSearch):
 
-    fields = SEARCH_FIELDS
+    fields = get_search_fields()
 
     facets = get_configured_facets()
 

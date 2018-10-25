@@ -29,13 +29,8 @@ BATCH_SIZE = 500
 
 FRAGMENT_SIZE = 50
 
-SEARCH_FIELDS = ('title^1.2',
-                 'description^1.1',
-                 'subjects^2',
-                 'extracted_text.content',
-                 'extracted_file.content',
-                 'extracted_image.content',
-                 )
+SEARCH_FIELDS = 'title^1.2 description^1.1 subjects^2 extracted_text.content ' \
+                'extracted_file.content extracted_image.content'
 
 HIGHLIGHT_KEY = 'collective.es.index.highlight'
 
@@ -151,6 +146,10 @@ class ElasticSearchProxyIndex(SimpleItem):
         """
         config = get_configuration()
         timeout = getattr(config, 'request_timeout', 20)
+        search_fields = getattr(config, 'search_fields', None)
+        if not search_fields:
+            search_fields = SEARCH_FIELDS
+        search_fields = search_fields.split()
         if query_blocker.blocked:
             return
         record = parseIndexRequest(request, self.id)
@@ -169,10 +168,10 @@ class ElasticSearchProxyIndex(SimpleItem):
             query_string = query_string[1:]
         search = search.query('simple_query_string',
                               query=query_string,
-                              fields=SEARCH_FIELDS
+                              fields=search_fields
                               )
         # setup highlighting
-        for field in SEARCH_FIELDS:
+        for field in search_fields:
             name = field.split('^')[0]
             if name == 'title':
                 # title shows up in results anyway

@@ -85,6 +85,9 @@ The elasticsearch directive supports the following keys:
   Default is `100000`.
   Use `-1` for infinite.
 
+`search_fields`
+  The search fields and their weights for searching, separated by spaces.
+
 Example::
 
   zope-conf-additional =
@@ -96,6 +99,7 @@ Example::
       max_blobsize 10000000 # 10 MB
       indexed_chars 200000
       use_celery true
+      search_fields title^1.2 description^1.1 subjects^2 extracted_text
       </elasticsearch>
 
 It is necessary to add this configuration to the buildout and rerun it
@@ -110,8 +114,12 @@ The collective.celery package requires adding the celery and collective.celery e
 Example::
 
   eggs =
+      celery
       Plone
+      elasticsearch
+      elasticsearch-dsl
       collective.es.index
+      collective.celery
 
 We still use the celery-broker part, for clarity.
 The celery part is still required, but is simpler::
