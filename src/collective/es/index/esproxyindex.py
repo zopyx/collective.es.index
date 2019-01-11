@@ -193,6 +193,9 @@ class ElasticSearchProxyIndex(SimpleItem):
         retval = IIBTree()
         highlights = OOBTree()
         for r in result:
+            if getattr(r, 'rid', None) is None:
+                # something was indexed with no rid. Ignore for now.
+                continue
             retval[r.rid] = int(10000 * float(r.meta.score))
             # Index query returns only rids, so we need
             # to save highlights for later use

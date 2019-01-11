@@ -18,6 +18,8 @@ Changelog
 
 - refactor code to avoid sending obj data in redis payload
 
+- add stopgap solution for missing rid problem
+
 
 1.0a1 (git tag)
 ---------------
