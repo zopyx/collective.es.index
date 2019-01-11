@@ -2,6 +2,13 @@ from celery.utils.log import get_task_logger
 from collective.celery import task
 from collective.es.index.utils import get_ingest_client
 from elasticsearch.exceptions import NotFoundError
+from zope.component import queryUtility
+from zope.component.hooks import getSite
+
+try:
+   from Products.CMFCore.interfaces import IIndexQueueProcessor
+except ImportError:
+   from collective.indexing.interfaces import IIndexQueueProcessor
 
 
 logger = get_task_logger(__name__)
@@ -16,18 +23,23 @@ def extra_config(startup):
 
 
 @task(name='indexer')
-def index_content(url, data):
-    logger.warning('Indexing {}'.format(url))
+def index_content(url, path):
+    logger.warning('Indexing {}'.format(path))
     es = get_ingest_client()
     if es is None:
         logger.warning('Elasticsearch client not found for indexing.')
         return
+    site = getSite()
+    obj = site.unrestrictedTraverse(path)
+    indexer = queryUtility(IIndexQueueProcessor, name='collective.es.index')
+    data = indexer.get_payload(obj)
+    data['body']['@id'] = url
     try:
         es.index(**data)
     except Exception:
         logger.exception(
             'indexing of {0} failed.'.format(
-                url,
+                path,
             ),
         )
 

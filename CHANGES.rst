@@ -16,6 +16,8 @@ Changelog
 
 - basic plone 4 compatibility
 
+- refactor code to avoid sending obj data in redis payload
+
 
 1.0a1 (git tag)
 ---------------

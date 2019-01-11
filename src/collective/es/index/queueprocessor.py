@@ -226,26 +226,7 @@ class ElasticSearchIndexQueueProcessor(object):
         path = '/'.join(obj.getPhysicalPath())
         data['rid'] = cat.getrid(path)
 
-    def index(self, obj, attributes=None):
-        query_blocker.block()
-        es = get_ingest_client()
-        if es is None:
-            logger.warning(
-                'No ElasticSearch client available.',
-            )
-            query_blocker.unblock()
-            return
-        try:
-            self._check_for_ingest_pipeline(es)
-            self._check_for_mapping(es)  # will also create the index
-        except TransportError:
-            logger.exception(
-                'ElasticSearch connection failed for {0}'.format(
-                    obj.absolute_url(),
-                ),
-            )
-            query_blocker.unblock()
-            return
+    def get_payload(self, obj):
         try:
             serializer = getMultiAdapter((obj, getRequest()), ISerializeToJson)
         except ComponentLookupError:
@@ -280,22 +261,40 @@ class ElasticSearchIndexQueueProcessor(object):
             body=data,
             request_timeout=es_config.request_timeout,
         )
+        return es_kwargs
+
+    def index(self, obj, attributes=None):
+        query_blocker.block()
+        es = get_ingest_client()
+        if es is None:
+            logger.warning(
+                'No ElasticSearch client available.',
+            )
+            query_blocker.unblock()
+            return
+        try:
+            self._check_for_ingest_pipeline(es)
+            self._check_for_mapping(es)  # will also create the index
+        except TransportError:
+            logger.exception(
+                'ElasticSearch connection failed for {0}'.format(
+                    obj.absolute_url(),
+                ),
+            )
+            query_blocker.unblock()
+            return
+        es_kwargs = self.get_payload(obj)
         parent = aq_parent(obj)
         portal = api.portal.get()
         if aq_base(portal) is aq_base(parent):
             self._check_and_add_portal_to_index(portal)
-            # annotations = IAnnotations(portal)
-            # es_kwargs['parent'] = annotations[ES_PORTAL_UUID_KEY]
-            pass
-        else:
-            # es_kwargs['parent'] = api.content.get_uuid(parent)
-            pass
         if es_config.use_celery:
-            index_content.delay(obj.absolute_url(), es_kwargs)
+            index_content.delay(obj.absolute_url(), obj.absolute_url_path())
         else:
             try:
                 es.index(**es_kwargs)
             except Exception:
+                uid = api.content.get_uuid(obj)
                 logger.exception(
                     'indexing of {0} failed.'.format(
                         uid,
