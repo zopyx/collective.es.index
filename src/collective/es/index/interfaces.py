@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """Module where all interfaces, events and exceptions live."""
-from Products.CMFCore.interfaces import IIndexQueueProcessor
 from zope.interface import Interface
 from zope.publisher.interfaces.browser import IDefaultBrowserLayer
+
+try:
+    from Products.CMFCore.interfaces import IIndexQueueProcessor
+except ImportError:
+    from collective.indexing.interfaces import IIndexQueueProcessor
 
 
 class ICollectiveEsIndexLayer(IDefaultBrowserLayer):

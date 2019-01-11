@@ -10,7 +10,6 @@ from elasticsearch.exceptions import TransportError
 from elasticsearch_dsl import Search
 from Globals import InitializeClass
 from OFS.SimpleItem import SimpleItem
-from Products.CMFCore.interfaces import IIndexQueueProcessor
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 from Products.PluginIndexes.common.util import parseIndexRequest
 from Products.PluginIndexes.interfaces import ISortIndex
@@ -19,6 +18,11 @@ from zope.component import queryUtility
 from zope.interface import implementer
 
 import logging
+
+try:
+    from Products.CMFCore.interfaces import IIndexQueueProcessor
+except ImportError:
+    from collective.indexing.interfaces import IIndexQueueProcessor
 
 
 logger = logging.getLogger(__name__)

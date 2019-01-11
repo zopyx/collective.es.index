@@ -14,6 +14,8 @@ Changelog
 
 - Add highlight support on search results
 
+- basic plone 4 compatibility
+
 
 1.0a1 (git tag)
 ---------------

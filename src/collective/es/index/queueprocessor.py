@@ -27,6 +27,12 @@ import base64
 import logging
 import uuid
 
+try:
+    from Products.Archetypes.interfaces import IBaseContent
+    HAS_ARCHETYPES = True
+except ImportError:
+    HAS_ARCHETYPES = False
+
 
 es_config = get_configuration()
 indexed_chars = getattr(es_config, 'indexed_chars', None)
@@ -42,6 +48,11 @@ KEYS_TO_REMOVE = [
     'items_total',
     'parent',
     '@components',
+]
+
+AT_SIMPLE_TEXT_FIELDS = [
+    'description',
+    'rights',
 ]
 
 INGEST_PIPELINES = {
@@ -164,6 +175,14 @@ class ElasticSearchIndexQueueProcessor(object):
         except Exception:
             logger.exception('indexing of {0} failed'.format(uid))
 
+    def _fix_at_fields(self, obj, data):
+        # unlike dexterity, AT text fields use same serializer as rich text,
+        # which wrecks our index mapping
+        if IBaseContent.providedBy(obj):
+            for field in AT_SIMPLE_TEXT_FIELDS:
+                if field in data and isinstance(data[field], dict):
+                    data[field] = data[field]['data']
+
     def _reduce_data(self, data):
         for key in KEYS_TO_REMOVE:
             if key in data:
@@ -248,6 +267,8 @@ class ElasticSearchIndexQueueProcessor(object):
             query_blocker.unblock()
             return
         self._reduce_data(data)
+        if HAS_ARCHETYPES:
+            self._fix_at_fields(obj, data)
         self._expand_rid(obj, data)
         self._expand_binary_data(obj, data)
         uid = api.content.get_uuid(obj)

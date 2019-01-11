@@ -54,6 +54,19 @@ New content will be indexed in ElasticSearch.
 
 To index existing content, a full ``Clear and Rebuild`` is needed (via ZMI/``portal_catalog``/Tab ``Advanced``).
 
+Using in Plone 4
+----------------
+
+This product can be used in Plone 4. but it requires the `collective.indexing`
+product. Just add this product to your Plone 4 buildout::
+
+    [buildout]
+
+    ...
+
+    eggs =
+        collective.indexing
+
 ES Python dependencies
 ----------------------
 

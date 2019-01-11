@@ -173,7 +173,8 @@ class FacetedPloneSearch(BrowserView):
         search = PloneSearch(query, filters=filters)
         response = search.execute()
         self._facets = response.facets
-        hits = [hit._d_['rid'] for hit in response.hits]
+        hits = [hit._d_['rid'] for hit in response.hits
+                if 'rid' in hit._d_]
         brains = [IContentListingObject(catalog._catalog[rid]) for rid in hits]
         batch = Batch(brains, b_size, b_start)
         return batch
