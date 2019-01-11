@@ -20,6 +20,8 @@ Changelog
 
 - add stopgap solution for missing rid problem
 
+- add a more detailed comment for code that skips highlights with no rid
+
 
 1.0a1 (git tag)
 ---------------
