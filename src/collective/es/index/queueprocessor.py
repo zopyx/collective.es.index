@@ -283,14 +283,15 @@ class ElasticSearchIndexQueueProcessor(object):
             )
             query_blocker.unblock()
             return
-        es_kwargs = self.get_payload(obj)
         parent = aq_parent(obj)
         portal = api.portal.get()
         if aq_base(portal) is aq_base(parent):
             self._check_and_add_portal_to_index(portal)
         if es_config.use_celery:
-            index_content.delay(obj.absolute_url(), obj.absolute_url_path())
+            path = '/'.join([p for p in obj.getPhysicalPath() if p != ''])
+            index_content.delay(path)
         else:
+            es_kwargs = self.get_payload(obj)
             try:
                 es.index(**es_kwargs)
             except Exception:

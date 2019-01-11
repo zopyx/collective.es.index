@@ -22,6 +22,8 @@ Changelog
 
 - add a more detailed comment for code that skips highlights with no rid
 
+- avoid generating index data twice for celery indexing, use relative path from root
+
 
 1.0a1 (git tag)
 ---------------

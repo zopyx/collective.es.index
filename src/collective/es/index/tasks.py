@@ -23,7 +23,7 @@ def extra_config(startup):
 
 
 @task(name='indexer')
-def index_content(url, path):
+def index_content(path):
     logger.warning('Indexing {}'.format(path))
     es = get_ingest_client()
     if es is None:
@@ -33,7 +33,6 @@ def index_content(url, path):
     obj = site.unrestrictedTraverse(path)
     indexer = queryUtility(IIndexQueueProcessor, name='collective.es.index')
     data = indexer.get_payload(obj)
-    data['body']['@id'] = url
     try:
         es.index(**data)
     except Exception:
