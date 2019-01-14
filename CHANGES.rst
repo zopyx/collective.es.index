@@ -24,6 +24,8 @@ Changelog
 
 - avoid generating index data twice for celery indexing, use relative path from root
 
+- Retry on POSKeyError when using celery
+
 
 1.0a1 (git tag)
 ---------------
