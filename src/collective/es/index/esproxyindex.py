@@ -8,7 +8,7 @@ from collective.es.index.utils import index_name
 from collective.es.index.utils import query_blocker
 from elasticsearch.exceptions import TransportError
 from elasticsearch_dsl import Search
-from Globals import InitializeClass
+from App.class_init import InitializeClass
 from OFS.SimpleItem import SimpleItem
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 from Products.PluginIndexes.common.util import parseIndexRequest
@@ -166,7 +166,7 @@ class ElasticSearchProxyIndex(SimpleItem):
                                preserve_order=True,
                                )
         search = search.source(include='rid')
-        query_string = record.keys[0].decode('utf8')
+        query_string = record.keys[0]
         if query_string and query_string.startswith('*'):
             # plone.app.querystring contains op sends a leading *, remove it
             query_string = query_string[1:]
