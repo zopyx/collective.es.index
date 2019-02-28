@@ -6,10 +6,13 @@ from plone.app.testing import IntegrationTesting
 from plone.app.testing import PloneSandboxLayer
 from plone.testing import z2
 
+
 class ProductConfiguration(object):
     max_blobsize = 0
     request_timeout = 20
     use_celery = False
+
+
 configuration = ProductConfiguration()
 
 import collective.es.index.utils

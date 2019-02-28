@@ -7,9 +7,9 @@ from zope.component import queryUtility
 from zope.component.hooks import getSite
 
 try:
-   from Products.CMFCore.interfaces import IIndexQueueProcessor
+    from Products.CMFCore.interfaces import IIndexQueueProcessor
 except ImportError:
-   from collective.indexing.interfaces import IIndexQueueProcessor
+    from collective.indexing.interfaces import IIndexQueueProcessor
 
 
 logger = get_task_logger(__name__)

@@ -2,8 +2,6 @@
 """Setup tests for this package."""
 from collective.es.index.testing import COLLECTIVE_ES_INDEX_INTEGRATION_TESTING
 from plone import api
-from plone.app.testing import applyProfile
-
 import unittest
 
 

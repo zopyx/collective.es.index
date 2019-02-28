@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import six
 import DateTime
 from zope.component import getMultiAdapter
 
@@ -129,7 +130,7 @@ class FacetedPloneSearch(BrowserView):
         if len(breadcrumbs) == 0:
             return None
         if len(breadcrumbs) > 3:
-            empty = {'absolute_url': '', 'Title': unicode('…', 'utf-8')}
+            empty = {'absolute_url': '', 'Title': six.text_type('…', 'utf-8')}
             breadcrumbs = [breadcrumbs[0], empty] + breadcrumbs[-2:]
         return breadcrumbs
 
